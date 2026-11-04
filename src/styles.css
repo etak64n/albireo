@@ -1,0 +1,201 @@
+@import "tailwindcss";
+/* The enter and leave animations of the menus, the side panel, and the dialogs. */
+@import "tw-animate-css";
+
+/* The colors, corners, shadows, and fonts come from the theme folder that
+   appearance.theme in albireo.config.ts names. Its theme.css sets the --theme-*
+   variables, and the names below turn them into Tailwind utilities. */
+@theme inline {
+  --color-page: var(--theme-page);
+  --color-surface: var(--theme-surface);
+  --color-raised: var(--theme-raised);
+  --color-line: var(--theme-line);
+  --color-ink: var(--theme-text);
+  --color-muted: var(--theme-muted);
+  --color-heading: var(--theme-heading);
+  --color-primary: var(--theme-primary);
+  --color-primary-hover: var(--theme-primary-hover);
+  --color-on-primary: var(--theme-on-primary);
+  --color-accent: var(--theme-accent);
+  --color-danger: var(--theme-danger);
+  --radius-ui: var(--theme-radius);
+  --shadow-card: var(--theme-shadow);
+  --shadow-lift: var(--theme-shadow-lift);
+  --font-sans: var(--theme-font-body);
+  --font-heading: var(--theme-font-heading);
+}
+
+@theme {
+  --animate-appear: appear 300ms ease-out both;
+
+  @keyframes appear {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+}
+
+body {
+  min-height: 100vh;
+  background: var(--theme-page);
+  color: var(--theme-text);
+  font-family: var(--theme-font-body);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 2px;
+}
+
+/* Decoration stops for people who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-ui border border-line bg-surface shadow-card;
+  }
+
+  .heading {
+    @apply font-heading font-bold text-heading;
+  }
+
+  .field {
+    @apply w-full rounded-ui border border-line bg-surface px-3 text-sm text-ink placeholder:text-muted focus:border-accent pointer-coarse:min-h-11 pointer-coarse:text-base;
+  }
+
+  .error-box {
+    @apply rounded-ui border border-danger/40 bg-danger/10 px-3 py-2 text-[13px] font-bold text-danger;
+  }
+
+  /* A card that lifts toward the viewer on hover, as videos and series do. */
+  .card {
+    @apply overflow-hidden rounded-ui border border-line bg-surface shadow-card transition duration-200 ease-out;
+  }
+}
+
+/* The Video.js player takes the theme: its corners, the accent for the bars and the
+   highlighted controls, and the body font. The whole picture shows, with bars around
+   a video of another shape. The skin reads only these public variables. */
+.albireo-player {
+  --media-border-radius: var(--theme-radius);
+  --media-accent-color: var(--theme-accent);
+  --media-font-family: var(--theme-font-body);
+  --media-object-fit: contain;
+  --media-object-position: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  box-shadow: var(--theme-shadow-lift);
+}
+
+/* Markdown previews in the theme. Headings stand out by size and weight only. */
+@layer components {
+  .markdown {
+    color: var(--theme-text);
+    font-size: 15px;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+  }
+  .markdown > * + * {
+    margin-top: 1em;
+  }
+  .markdown :is(h1, h2, h3, h4, h5, h6) {
+    margin-top: 1.6em;
+    color: var(--theme-heading);
+    font-family: var(--theme-font-heading);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .markdown > :first-child {
+    margin-top: 0;
+  }
+  .markdown h1 {
+    font-size: 1.9em;
+  }
+  .markdown h2 {
+    font-size: 1.5em;
+  }
+  .markdown h3 {
+    font-size: 1.2em;
+  }
+  .markdown ul {
+    padding-left: 1.5em;
+    list-style: disc;
+  }
+  .markdown ol {
+    padding-left: 1.5em;
+    list-style: decimal;
+  }
+  .markdown li + li {
+    margin-top: 0.25em;
+  }
+  .markdown a {
+    color: var(--theme-heading);
+    text-decoration: underline;
+    text-decoration-color: var(--theme-accent);
+    text-underline-offset: 2px;
+  }
+  .markdown strong {
+    color: var(--theme-heading);
+  }
+  .markdown code {
+    padding: 0.1em 0.35em;
+    border-radius: var(--theme-radius);
+    background: var(--theme-raised);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em;
+  }
+  .markdown pre {
+    overflow-x: auto;
+    padding: 1em;
+    border-radius: var(--theme-radius);
+    background: var(--theme-raised);
+  }
+  .markdown pre code {
+    padding: 0;
+    background: none;
+  }
+  .markdown blockquote {
+    padding-left: 1.25em;
+    color: var(--theme-muted);
+  }
+  .markdown table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+  }
+  .markdown :is(th, td) {
+    padding: 0.4em 0.7em;
+    border: 1px solid var(--theme-line);
+    text-align: left;
+  }
+  .markdown th {
+    background: var(--theme-raised);
+    color: var(--theme-heading);
+  }
+  .markdown hr {
+    margin: 2em 0;
+    border: 0;
+    border-top: 1px solid var(--theme-line);
+  }
+  .markdown img {
+    max-width: 100%;
+  }
+  .markdown .contains-task-list {
+    padding-left: 0.25em;
+    list-style: none;
+  }
+  .markdown input[type="checkbox"] {
+    margin-right: 0.4em;
+  }
+}

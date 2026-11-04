@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.cloudflare/
+.wrangler/
+
+# Settings and secrets of each deployment
+albireo.config.ts
+.env
+.env.*
+.dev.vars*
