@@ -98,6 +98,18 @@ describe("validateSettings", () => {
     expect(settings.production.access.teamDomain).toBe("https://example.cloudflareaccess.com");
   });
 
+  it("lets every admin sign in through Access", () => {
+    expect(problemsOf(settingsWith({ admins: ["admin@example.com", "editor@example.com"] }))).toEqual([
+      "production.access.allow must include every admin, so that they can sign in: editor@example.com.",
+    ]);
+  });
+
+  it("allows at least one person to sign in", () => {
+    expect(problemsOf(settingsWith({ admins: [], "production.access.allow": [] }))).toEqual([
+      "production.access.allow must name at least one person.",
+    ]);
+  });
+
   it("accepts no admins", () => {
     expect(validateSettings(settingsWith({ admins: [] })).admins).toEqual([]);
   });

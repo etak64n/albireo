@@ -3,9 +3,9 @@
 // The values come from albireo.config.ts, so a deployment does not edit this
 // file. `cf dev` runs in the "development" mode: it uses the development
 // storage and answers localhost without Cloudflare Access. `cf build` and
-// `cf deploy` run in the "production" mode. Commands that only call the
-// Cloudflare API, such as `cf d1 migrations apply`, load this file without a
-// mode and read the production settings, which name the real account and database.
+// `pnpm stack:deploy`, which runs `cf deploy`, use the "production" mode.
+// Commands that only call the Cloudflare API, such as `cf d1 list`, load this
+// file without a mode and read the production settings, which name the account.
 
 import { bindings, defineConfig } from "cf/config";
 import albireoConfig from "./albireo.config.ts";
@@ -20,6 +20,22 @@ const LOCAL_R2 = {
   accessKeyId: "albireo-local",
   secretAccessKey: "albireo-local-secret",
 };
+
+// `cf dev` keeps its D1 database on this machine under this ID, and
+// `pnpm db:migrate:local` (package.json) applies the migrations to the same ID.
+const LOCAL_D1_ID = "00000000-0000-4000-8000-000000000000";
+
+/**
+ * The ID of the production D1 database. `pnpm stack:deploy` finds the database of
+ * `database.name`, or creates it, and passes its ID here, so the settings hold no ID.
+ */
+function productionDatabaseId(): string {
+  const id = process.env["ALBIREO_DATABASE_ID"] ?? "";
+  if (id === "") {
+    throw new Error("Deploy albireo with `pnpm stack:deploy`, which passes the ID of the D1 database in ALBIREO_DATABASE_ID.");
+  }
+  return id;
+}
 
 export default defineConfig(({ mode }) => {
   const settings = validateSettings(albireoConfig);
@@ -45,11 +61,20 @@ export default defineConfig(({ mode }) => {
         runWorkerFirst: ["/api/*"],
       },
       env: {
-        DB: bindings.d1({ name: settings.database.name, id: settings.database.id }),
+        // API-only commands run without a mode and need no database ID.
+        DB: bindings.d1({
+          name: settings.database.name,
+          ...(isDevelopment ? { id: LOCAL_D1_ID } : mode === "production" ? { id: productionDatabaseId() } : {}),
+        }),
         // "local-development" lets the Worker answer localhost without an Access token.
         AUTH_MODE: bindings.text(isDevelopment ? "local-development" : "cloudflare-access"),
-        ACCESS_TEAM_DOMAIN: bindings.text(settings.production.access.teamDomain),
-        ACCESS_AUD: bindings.text(settings.production.access.aud),
+        ...(isDevelopment
+          ? {}
+          : {
+            ACCESS_TEAM_DOMAIN: bindings.text(settings.production.access.teamDomain),
+            // The AUD tag of the Access application that `pnpm stack:deploy` creates for the domain.
+            ACCESS_AUD: bindings.secret(),
+          }),
         SIGNED_URL_TTL_SECONDS: bindings.text(String(settings.signedUrlTtlSeconds)),
         // A JSON list, so that a deployment without admins still has the binding.
         ADMIN_EMAILS: bindings.text(JSON.stringify(settings.admins)),
@@ -62,7 +87,7 @@ export default defineConfig(({ mode }) => {
             S3_REGION: bindings.text(storage.region),
             S3_BUCKET: bindings.text(storage.bucket),
             S3_URL_STYLE: bindings.text(storage.urlStyle),
-            // Secrets: .env for `cf dev`, and `cf deploy --secrets-file` for production.
+            // Secrets: .env for `cf dev`, and .env.production, which `pnpm stack:deploy` uploads.
             S3_ACCESS_KEY_ID: bindings.secret(),
             S3_SECRET_ACCESS_KEY: bindings.secret(),
           }

@@ -36,5 +36,9 @@ jobs:
 
       - run: pnpm test
 
+      # A deployment gets the ID of its D1 database from pnpm stack:deploy. The build
+      # only checks the code, so any version 4 UUID does.
       - name: Build
         run: pnpm exec cf build
+        env:
+          ALBIREO_DATABASE_ID: 00000000-0000-4000-8000-000000000000

@@ -10,10 +10,10 @@ export default defineAlbireoConfig({
   // Cloudflare account that owns the Worker, the domain, and the D1 database
   accountId: "0123456789abcdef0123456789abcdef",
   workerName: "albireo",
-  // D1 database that stores the list of videos
+  // D1 database that stores the list of videos. `pnpm stack:deploy` creates it
+  // when the account has no database of this name.
   database: {
     name: "albireo",
-    id: "00000000-0000-4000-8000-000000000000",
   },
   // Lifetime of the signed URLs that the browser uses to upload and play videos.
   // The player gets a new URL when one expires, but a lifetime longer than
@@ -38,9 +38,12 @@ export default defineAlbireoConfig({
       bucket: "albireo-videos",
       urlStyle: "path",
     },
+    // Cloudflare Access, which lets only these people open albireo
     access: {
+      // The team domain of your Zero Trust organization
       teamDomain: "https://example.cloudflareaccess.com",
-      aud: "0000000000000000000000000000000000000000000000000000000000000000",
+      // The emails that may sign in. They include every admin.
+      allow: ["admin@example.com"],
     },
   },
   // `cf dev` serves albireo on localhost without Cloudflare Access.

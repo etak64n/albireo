@@ -10,8 +10,9 @@
   },
   "packageManager": "pnpm@12.16.1",
   "scripts": {
-    "db:migrate": "cf d1 migrations apply \"$(node scripts/config-value.ts database.id)\" --dir migrations",
-    "db:migrate:local": "cf d1 migrations apply \"$(node scripts/config-value.ts database.id)\" --dir migrations --local --persist-to .cloudflare/state",
+    "db:migrate:local": "cf d1 migrations apply 00000000-0000-4000-8000-000000000000 --dir migrations --local --persist-to .cloudflare/state",
+    "stack:deploy": "node stack/cli.ts deploy",
+    "stack:delete": "node stack/cli.ts delete",
     "typecheck": "tsc -p tsconfig.json && tsc -p worker/tsconfig.json && tsc -p tsconfig.node.json",
     "test": "vitest run"
   },

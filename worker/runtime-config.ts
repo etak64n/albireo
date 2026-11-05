@@ -29,7 +29,8 @@ export interface AccessConfig {
 
 export interface RuntimeConfig {
   authMode: AuthMode;
-  access: AccessConfig;
+  /** Null in the local development mode, where Access does not run. */
+  access: AccessConfig | null;
   storage: StorageConfig;
   signedUrlTtlSeconds: number;
   /** Lowercase emails of the people who can edit every video and every series. */
@@ -101,7 +102,7 @@ export function readRuntimeConfig(env: Env, requestUrl: string): RuntimeConfig {
 
   const config: RuntimeConfig = {
     authMode,
-    access: { teamDomain: text("ACCESS_TEAM_DOMAIN"), aud: text("ACCESS_AUD") },
+    access: authMode === "cloudflare-access" ? { teamDomain: text("ACCESS_TEAM_DOMAIN"), aud: text("ACCESS_AUD") } : null,
     storage: {
       endpoint,
       region: text("S3_REGION"),

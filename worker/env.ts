@@ -21,8 +21,10 @@ export interface D1Database {
 export interface Env {
   DB: D1Database;
   AUTH_MODE: string;
-  ACCESS_TEAM_DOMAIN: string;
-  ACCESS_AUD: string;
+  /** Bound only in the "cloudflare-access" mode. */
+  ACCESS_TEAM_DOMAIN?: string;
+  /** The AUD tag of the Access application, which `pnpm stack:deploy` uploads as a secret. */
+  ACCESS_AUD?: string;
   SIGNED_URL_TTL_SECONDS: string;
   /** JSON list of the lowercase emails of admins. */
   ADMIN_EMAILS: string;

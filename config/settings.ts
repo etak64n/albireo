@@ -37,8 +37,11 @@ export type StorageSettings = S3StorageSettings | LocalR2StorageSettings;
 export interface AccessSettings {
   /** Cloudflare Access team domain, such as https://example.cloudflareaccess.com. */
   teamDomain: string;
-  /** Application Audience (AUD) tag of the Access application that protects the domain. */
-  aud: string;
+  /**
+   * Emails of the people who may sign in. `pnpm stack:deploy` gives the domain an
+   * Access application whose only policy allows these addresses.
+   */
+  allow: string[];
 }
 
 export interface AppearanceSettings {
@@ -73,8 +76,8 @@ export interface AlbireoSettings {
   accountId: string;
   /** Name of the Worker. */
   workerName: string;
-  /** D1 database that stores the list of videos. */
-  database: { name: string; id: string };
+  /** D1 database that stores the list of videos. `pnpm stack:deploy` creates it when no database has this name. */
+  database: { name: string };
   /** Lifetime of the signed storage URLs that the browser uses, in seconds (60 to 604800). */
   signedUrlTtlSeconds: number;
   /** Emails of the people who can edit every video and every series. Everyone else edits their own. */
@@ -106,8 +109,6 @@ const ACCOUNT_ID = /^[0-9a-f]{32}$/;
 const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const HOSTNAME = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
 const DATABASE_NAME = /^[A-Za-z0-9_-]{1,64}$/;
-// D1 database IDs are version 4 UUIDs, and the Cloudflare CLI accepts no other form.
-const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const BUCKET = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
 const NO_WHITESPACE = /^\S+$/;
 // A lowercase email address. albireo compares it with the email that Cloudflare Access reports, in lowercase.
@@ -142,11 +143,9 @@ export function validateSettings(input: unknown): AlbireoSettings {
 
   const database = readObject(root["database"], "database", problems);
   let databaseName = "";
-  let databaseId = "";
   if (database !== null) {
-    checkKeys(database, "database.", ["name", "id"], problems);
+    checkKeys(database, "database.", ["name"], problems);
     databaseName = readPattern(database, "name", "database.", DATABASE_NAME, "letters, digits, underscores, and hyphens", problems);
-    databaseId = readPattern(database, "id", "database.", UUID_V4, "the lowercase version 4 UUID that D1 shows for the database", problems);
   }
 
   const production = readObject(root["production"], "production", problems);
@@ -169,13 +168,17 @@ export function validateSettings(input: unknown): AlbireoSettings {
     developmentStorage = readDevelopmentStorage(development["storage"], problems);
   }
 
+  // Admins sign in through Access too, so Access has to let them in.
+  const locked = access === null ? [] : admins.filter((admin) => !access.allow.includes(admin));
+  if (locked.length > 0) problems.push(`production.access.allow must include every admin, so that they can sign in: ${locked.join(", ")}.`);
+
   if (problems.length > 0 || appearance === null || productionStorage === null || access === null || developmentStorage === null) {
     throw new SettingsError(problems);
   }
   return {
     accountId,
     workerName,
-    database: { name: databaseName, id: databaseId },
+    database: { name: databaseName },
     signedUrlTtlSeconds,
     admins,
     appearance,
@@ -239,10 +242,11 @@ function readS3Storage(storage: Fields, path: string, allowLocalHttp: boolean, p
 function readAccess(input: unknown, problems: Problems): AccessSettings | null {
   const access = readObject(input, "production.access", problems);
   if (access === null) return null;
-  checkKeys(access, "production.access.", ["teamDomain", "aud"], problems);
+  checkKeys(access, "production.access.", ["teamDomain", "allow"], problems);
   const teamDomain = readOrigin(access, "teamDomain", "production.access.", false, problems);
-  const aud = readPattern(access, "aud", "production.access.", NO_WHITESPACE, "the AUD tag of the Access application", problems);
-  return { teamDomain, aud };
+  const allow = readEmails(access, "allow", problems, "production.access.");
+  if (Array.isArray(access["allow"]) && access["allow"].length === 0) problems.push("production.access.allow must name at least one person.");
+  return { teamDomain, allow };
 }
 
 function readTtl(root: Fields, problems: Problems): number {
@@ -268,14 +272,14 @@ function readAppearance(input: unknown, problems: Problems): AppearanceSettings 
 }
 
 // Reads a list of lowercase email addresses. An empty list is allowed: then nobody is an admin.
-function readEmails(fields: Fields, key: string, problems: Problems): string[] {
+function readEmails(fields: Fields, key: string, problems: Problems, prefix = ""): string[] {
   if (!(key in fields)) {
-    problems.push(`${key} is missing.`);
+    problems.push(`${prefix}${key} is missing.`);
     return [];
   }
   const value = fields[key];
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && EMAIL.test(item))) {
-    problems.push(`${key} must be a list of lowercase email addresses.`);
+    problems.push(`${prefix}${key} must be a list of lowercase email addresses.`);
     return [];
   }
   return value as string[];

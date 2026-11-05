@@ -150,6 +150,7 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
       email = config.localUserEmail;
     } else {
       const token = c.req.header("cf-access-jwt-assertion");
+      if (config.access === null) throw new ConfigurationError(["ACCESS_TEAM_DOMAIN and ACCESS_AUD are not set."]);
       const identity = await verifyAccessToken(token, config.access, deps.keySetFor(config.access.teamDomain));
       if (identity.email === null) {
         throw new AccessDeniedError("The Cloudflare Access token names no person. albireo needs a person who signs in.");

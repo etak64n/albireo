@@ -24,7 +24,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "config",
-    "scripts",
+    "stack",
     "test"
   ]
 }
