@@ -397,23 +397,23 @@ export const ATTACHMENT_NAME_MAX_LENGTH = 255;
 
 ## Try it locally
 
-You can run albireo on your machine with Node.js alone. You need no Cloudflare account and no bucket.
+You can run albireo on your machine with Node.js and pnpm alone. You need no Cloudflare account and no bucket.
 
-albireo needs Node.js ^22.23.0, ^24.22.0, or ^26.12.0 (package.json, `engines`).
-The project installs the Cloudflare CLI, `cf`, as a development dependency, so you run it with `npx cf` or through the npm scripts.
+albireo needs Node.js ^22.23.0, ^24.22.0, or ^26.12.0 (package.json, `engines`), and the pnpm version in package.json (`packageManager`).
+The project installs the Cloudflare CLI, `cf`, as a development dependency, so you run it with `pnpm exec cf`.
 
 ```bash
-# Install the dependency versions that package-lock.json records
-npm ci
+# Install the dependency versions that pnpm-lock.yaml records
+pnpm install --frozen-lockfile
 
 # Create your settings from the example. The example values work locally as they are.
 cp albireo.config.example.ts albireo.config.ts
 
 # Create the tables in the local D1 database that cf dev uses
-npm run db:migrate:local
+pnpm db:migrate:local
 
 # Start the dev server. Open the address that it prints, http://localhost:5173 by default.
-npm run dev
+pnpm exec cf dev
 ```
 
 The example values work locally because `cf dev` needs none of the production values.
@@ -460,7 +460,7 @@ Step 1: sign in the CLI to your Cloudflare account.
 
 ```bash
 # Sign the Cloudflare CLI in to your account. The cf commands in the next steps use this sign-in.
-npx cf auth login
+pnpm exec cf auth login
 ```
 
 Step 2: copy the example settings, and fill in `accountId` first.
@@ -478,7 +478,7 @@ Step 3: create the D1 database.
 ```bash
 # Create the D1 database that stores the library.
 # --name albireo : the name of the new database. Write the same name in database.name.
-npx cf d1 create --name albireo
+pnpm exec cf d1 create --name albireo
 ```
 
 Copy the database ID, a UUID, from the output into `database.id`.
@@ -488,7 +488,7 @@ Step 4: create the tables in the new database.
 
 ```bash
 # Apply the files in migrations/ to the database whose ID is in database.id
-npm run db:migrate
+pnpm db:migrate
 ```
 
 Step 5: set CORS on the bucket with the rules in examples/bucket-cors.json.
@@ -553,9 +553,8 @@ Step 8: build albireo and deploy it.
 
 ```bash
 # Build albireo and deploy it with the keys.
-# --                             : npm passes the arguments after it to cf deploy
 # --secrets-file .env.production : a file of secrets, in JSON or .env format, that cf uploads with the new version
-npm run deploy -- --secrets-file .env.production
+pnpm exec cf deploy --secrets-file .env.production
 ```
 
 ### Update a deployment
@@ -565,8 +564,8 @@ When migrations/ has a new file, apply it before you deploy, so that the new cod
 
 ```bash
 # Apply the new migration files, then deploy
-npm run db:migrate
-npm run deploy -- --secrets-file .env.production
+pnpm db:migrate
+pnpm exec cf deploy --secrets-file .env.production
 ```
 
 ## Local development
@@ -641,7 +640,7 @@ With `"s3"`, you write a storage like `production.storage`, for a bucket that ho
 ### Local data
 
 `cf dev` keeps the local D1 database and the local bucket in `.cloudflare/state`, which Git ignores.
-`npm run db:migrate:local` passes `--persist-to .cloudflare/state`, so the tables go where `cf dev` reads them (package.json).
+`pnpm db:migrate:local` passes `--persist-to .cloudflare/state`, so the tables go where `cf dev` reads them (package.json).
 
 ```bash
 # Start over with empty local data. Stop cf dev first.
@@ -649,7 +648,7 @@ With `"s3"`, you write a storage like `production.storage`, for a bucket that ho
 # -rf : delete the folder and everything in it, without asking
 rm -rf .cloudflare/state
 # Create the tables again
-npm run db:migrate:local
+pnpm db:migrate:local
 ```
 
 ### Checks
@@ -658,10 +657,10 @@ Run these commands to check the code.
 
 ```bash
 # Type-check three TypeScript projects: the browser app, the Worker, and the configuration with the tests
-npm run typecheck
+pnpm typecheck
 
 # Run the Vitest tests. They use node:sqlite in place of D1, and fakes in place of the bucket and Access.
-npm test
+pnpm test
 ```
 
 The tests apply the real migrations to node:sqlite, the search index included, because the SQLite in Node.js has FTS5 (test/support/d1.ts).
@@ -819,13 +818,10 @@ To make a theme of your own, copy themes/light to a folder of yours, change the 
 
 package.json defines these scripts.
 
-- `npm run dev`: runs `cf dev`, the local dev server
-- `npm run build`: runs `cf build`, the production build
-- `npm run deploy`: runs `cf deploy`. Pass `--secrets-file` after `--`.
-- `npm run db:migrate`: applies migrations/ to the D1 database in `database.id`
-- `npm run db:migrate:local`: applies migrations/ to the local D1 database that `cf dev` uses
-- `npm run typecheck`: type-checks the browser app, the Worker, and the configuration with the tests
-- `npm test`: runs the Vitest tests once
+- `pnpm db:migrate`: applies migrations/ to the D1 database in `database.id`
+- `pnpm db:migrate:local`: applies migrations/ to the local D1 database that `cf dev` uses
+- `pnpm typecheck`: type-checks the browser app, the Worker, and the configuration with the tests
+- `pnpm test`: runs the Vitest tests once
 
 ## Project layout
 
@@ -837,7 +833,7 @@ package.json defines these scripts.
 - themes/: the light and dark themes
 - test/: the Vitest tests
 - examples/: the bucket CORS example
-- scripts/: config-value.ts, which prints one setting for the npm scripts
+- scripts/: config-value.ts, which prints one setting for the package.json scripts
 - cloudflare.config.ts: the Worker configuration that `cf` reads, built from albireo.config.ts
 - albireo.config.example.ts: the example settings
 
