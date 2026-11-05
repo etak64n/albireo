@@ -30,8 +30,10 @@ This README explains what albireo does, how it works, how to run it on your mach
   - [Try it locally](#try-it-locally)
   - [Deploy](#deploy)
     - [What you need](#what-you-need)
+    - [The stack](#the-stack)
     - [Steps](#steps)
     - [Update a deployment](#update-a-deployment)
+    - [Delete a deployment](#delete-a-deployment)
   - [Local development](#local-development)
     - [Architecture with cf dev](#architecture-with-cf-dev)
     - [Sign-in on localhost](#sign-in-on-localhost)
@@ -433,9 +435,9 @@ This section deploys albireo to your own domain. It lists what you need first, t
 You need four things.
 
 1. A Cloudflare account that also holds the zone of your domain (config/settings.ts, `production.domain`)
-2. An S3-compatible bucket that supports Signature Version 4 presigned URLs, multipart uploads, and CORS
-3. An access key for that bucket
-4. Cloudflare Access for the domain
+2. A Zero Trust organization in that account, which gives you the team domain of Cloudflare Access
+3. An S3-compatible bucket that supports Signature Version 4 presigned URLs, multipart uploads, and CORS
+4. An access key for that bucket
 
 CORS (Cross-Origin Resource Sharing) is the browser rule that decides which other sites a page may send requests to.
 The bucket needs CORS settings because the albireo page uploads files to the bucket and reads attachments from it, and the bucket has another origin.
@@ -443,55 +445,51 @@ The bucket needs CORS settings because the albireo page uploads files to the buc
 Give the access key permission to read and write objects in this bucket only.
 The Worker uses the key only to sign reads, uploads, and multipart operations, and albireo never deletes objects, so the key needs nothing more.
 
+### The stack
+
+albireo deploys as one stack, as in AWS CloudFormation: one command creates or updates every Cloudflare resource that the settings describe, and one command deletes them all.
+
+A stack has three resources.
+
+- The D1 database of `database.name`, which keeps the library
+- The Access application of `production.domain`, whose only policy allows the emails in `production.access.allow`
+- The Worker, which serves the browser app and the API on `production.domain`
+
+Each resource carries the tag `albireo.stack=<workerName>` (Cloudflare Resource Tagging), so Cloudflare keeps the list of the resources, and your machine keeps no state.
+A resource that carries the tag of another stack is never taken over: the deploy stops before it changes anything.
+The bucket stays outside the stack, because it can be at any S3-compatible provider.
+
+Resource Tagging is in public beta at Cloudflare.
+
 ### Steps
 
-The deployment has eight steps.
+The deployment has five steps.
 
 1. Sign in the CLI
 2. Write the settings
-3. Create the D1 database
-4. Create the tables
-5. Set CORS on the bucket
-6. Write the keys
-7. Create the Access application
-8. Deploy
+3. Set CORS on the bucket
+4. Write the keys
+5. Deploy the stack
 
 Step 1: sign in the CLI to your Cloudflare account.
 
 ```bash
-# Sign the Cloudflare CLI in to your account. The cf commands in the next steps use this sign-in.
+# Sign the Cloudflare CLI in to your account. The commands in the next steps use this sign-in.
 pnpm exec cf auth login
 ```
 
-Step 2: copy the example settings, and fill in `accountId` first.
-Commands that only call the Cloudflare API read the account and the database from the production settings (cloudflare.config.ts, header comment).
+Step 2: copy the example settings, and fill in every value.
+Commands that only call the Cloudflare API read the account from `accountId` (cloudflare.config.ts, header comment).
 
 ```bash
 # Create your settings from the example. Git ignores albireo.config.ts.
 cp albireo.config.example.ts albireo.config.ts
 ```
 
+In `production.access.allow`, write the emails of the people who may sign in, every admin included: Access lets in only these people.
 The [Configuration reference](#configuration-reference) describes every setting.
 
-Step 3: create the D1 database.
-
-```bash
-# Create the D1 database that stores the library.
-# --name albireo : the name of the new database. Write the same name in database.name.
-pnpm exec cf d1 create --name albireo
-```
-
-Copy the database ID, a UUID, from the output into `database.id`.
-The Cloudflare CLI accepts only version 4 UUIDs as D1 IDs (config/settings.ts).
-
-Step 4: create the tables in the new database.
-
-```bash
-# Apply the files in migrations/ to the database whose ID is in database.id
-pnpm db:migrate
-```
-
-Step 5: set CORS on the bucket with the rules in examples/bucket-cors.json.
+Step 3: set CORS on the bucket with the rules in examples/bucket-cors.json.
 Replace `https://videos.example.com` in the file with your domain.
 
 ```jsonc
@@ -531,7 +529,7 @@ aws s3api put-bucket-cors \
   --cors-configuration file://examples/bucket-cors.json
 ```
 
-Step 6: write the access key in a file that Git ignores, such as `.env.production`, with the names in `.env.example`.
+Step 4: write the access key in `.env.production`, with the names in `.env.example`.
 
 ```dotenv
 # .env.production: the access key of the production bucket
@@ -540,32 +538,51 @@ S3_SECRET_ACCESS_KEY=your-secret-access-key
 ```
 
 Git ignores `.env` and `.env.*` files (.gitignore).
-Keep the keys out of albireo.config.ts: cf uploads them as Worker secrets, not as plain settings (cloudflare.config.ts, `bindings.secret`).
+Keep the keys out of albireo.config.ts: `pnpm stack:deploy` uploads them as Worker secrets, not as plain settings (cloudflare.config.ts, `bindings.secret`).
 
-Step 7: create a self-hosted Access application that covers `production.domain`.
-Create it before you deploy, so that the domain is never served without Access.
-
-- Write your team domain, `https://<team>.cloudflareaccess.com`, in `production.access.teamDomain`.
-- Write the AUD tag of the application in `production.access.aud`.
-
-Step 8: build albireo and deploy it.
-`cf deploy` attaches `production.domain` to the Worker (cloudflare.config.ts, `domains`).
+Step 5: deploy the stack.
 
 ```bash
-# Build albireo and deploy it with the keys.
-# --secrets-file .env.production : a file of secrets, in JSON or .env format, that cf uploads with the new version
-pnpm exec cf deploy --secrets-file .env.production
+# Create or update the D1 database, the Access application, and the Worker
+pnpm stack:deploy
 ```
+
+`pnpm stack:deploy` does these things in order (stack/stack.ts).
+
+1. Finds the D1 database of `database.name`, or creates it, and applies the files in migrations/ to it
+2. Creates the Access application of `production.domain`, or updates it to the settings
+3. Deploys the Worker with the keys of `.env.production`, the AUD tag of the Access application, and the ID of the database
+4. Tags each resource with the name of the stack
+
+The Access application exists before the Worker serves the domain, so the domain is never served without Access.
+`cf deploy` attaches `production.domain` to the Worker (cloudflare.config.ts, `domains`).
+
+Deploy with `pnpm stack:deploy`, not with `cf deploy` alone: a production build needs the ID of the database, which `pnpm stack:deploy` passes in `ALBIREO_DATABASE_ID` (cloudflare.config.ts).
 
 ### Update a deployment
 
-To deploy a new version, run the same deploy command.
-When migrations/ has a new file, apply it before you deploy, so that the new code finds its tables.
+To deploy a new version, run `pnpm stack:deploy` again.
+It applies the new files in migrations/ before the new code goes live, and it updates the Access policy to `production.access.allow`.
+
+### Delete a deployment
+
+`pnpm stack:delete` deletes every resource of the stack.
 
 ```bash
-# Apply the new migration files, then deploy
-pnpm db:migrate
-pnpm exec cf deploy --secrets-file .env.production
+# List the resources of the stack, and delete them after you type the stack name
+pnpm stack:delete
+```
+
+It deletes the Worker first, then the Access application, then the D1 database, and it removes their tags.
+Deleting the database erases the library: the titles, the series, the comments, and the history.
+The videos stay in the bucket, and the command names the bucket and the keys for you to delete.
+A resource that is already gone counts as deleted, so a delete that stopped halfway can run again.
+
+Where nobody can type, such as in CI, pass the stack name with `--confirm`.
+
+```bash
+# Delete the stack named albireo without a prompt
+pnpm stack:delete --confirm albireo
 ```
 
 ## Local development
@@ -671,7 +688,7 @@ It copies the example settings, then runs the type checks, the tests, and `cf bu
 ## Configuration reference
 
 albireo.config.ts holds every setting of one deployment.
-Storage keys do not go in this file: they go in `.env` or the file that you pass to `--secrets-file`.
+Storage keys do not go in this file: they go in `.env` for `cf dev`, and in `.env.production` for `pnpm stack:deploy`.
 
 ### Example
 
@@ -690,10 +707,10 @@ export default defineAlbireoConfig({
   // Cloudflare account that owns the Worker, the domain, and the D1 database
   accountId: "0123456789abcdef0123456789abcdef",
   workerName: "albireo",
-  // D1 database that stores the list of videos
+  // D1 database that stores the list of videos. `pnpm stack:deploy` creates it
+  // when the account has no database of this name.
   database: {
     name: "albireo",
-    id: "00000000-0000-4000-8000-000000000000",
   },
   // Lifetime of the signed URLs that the browser uses to upload and play videos.
   // The player gets a new URL when one expires, but a lifetime longer than
@@ -718,9 +735,12 @@ export default defineAlbireoConfig({
       bucket: "albireo-videos",
       urlStyle: "path",
     },
+    // Cloudflare Access, which lets only these people open albireo
     access: {
+      // The team domain of your Zero Trust organization
       teamDomain: "https://example.cloudflareaccess.com",
-      aud: "0000000000000000000000000000000000000000000000000000000000000000",
+      // The emails that may sign in. They include every admin.
+      allow: ["admin@example.com"],
     },
   },
   // `cf dev` serves albireo on localhost without Cloudflare Access.
@@ -749,11 +769,8 @@ Every setting is required, and a key that albireo does not read is an error, whi
   - The name of the Worker
   - Lowercase letters, digits, and hyphens, at most 63 characters, starting and ending with a letter or a digit
 - `database.name`
-  - The name of the D1 database
+  - The name of the D1 database. `pnpm stack:deploy` finds the database of this name in the account, or creates it.
   - Letters, digits, underscores, and hyphens, 1 to 64 characters
-- `database.id`
-  - The ID of the D1 database
-  - A lowercase version 4 UUID
 - `signedUrlTtlSeconds`
   - The lifetime of presigned URLs, in seconds
   - From 60 to 604800. 604800 seconds, seven days, is the longest that Signature Version 4 allows.
@@ -761,6 +778,7 @@ Every setting is required, and a key that albireo does not read is an error, whi
 - `admins`
   - The people who edit every video and every series, by the email that Access reports
   - A list of lowercase email addresses. The list may be empty.
+  - Every admin must also be in `production.access.allow`, so that they can sign in.
 - `appearance.siteName`
   - The name in the header and in the title of every page
   - 1 to 40 characters that do not start or end with a space
@@ -784,8 +802,9 @@ Every setting is required, and a key that albireo does not read is an error, whi
   - `"virtual-hosted"` puts the bucket name in the hostname.
 - `production.access.teamDomain`
   - The `https://` origin of your Access team domain
-- `production.access.aud`
-  - The AUD tag of the Access application that protects the domain
+- `production.access.allow`
+  - The people who may sign in, by email. `pnpm stack:deploy` gives the domain an Access application whose only policy allows them.
+  - A list of one or more lowercase email addresses, every admin included
 - `development.signInAs`
   - The person that `cf dev` signs in, because Access does not run on your machine
   - A lowercase email address
@@ -818,7 +837,8 @@ To make a theme of your own, copy themes/light to a folder of yours, change the 
 
 package.json defines these scripts.
 
-- `pnpm db:migrate`: applies migrations/ to the D1 database in `database.id`
+- `pnpm stack:deploy`: creates or updates the D1 database, the Access application, and the Worker of the stack
+- `pnpm stack:delete`: deletes the Worker, the Access application, and the D1 database of the stack
 - `pnpm db:migrate:local`: applies migrations/ to the local D1 database that `cf dev` uses
 - `pnpm typecheck`: type-checks the browser app, the Worker, and the configuration with the tests
 - `pnpm test`: runs the Vitest tests once
@@ -833,7 +853,7 @@ package.json defines these scripts.
 - themes/: the light and dark themes
 - test/: the Vitest tests
 - examples/: the bucket CORS example
-- scripts/: config-value.ts, which prints one setting for the package.json scripts
+- stack/: `pnpm stack:deploy` and `pnpm stack:delete`, which create and delete the Cloudflare resources of a deployment
 - cloudflare.config.ts: the Worker configuration that `cf` reads, built from albireo.config.ts
 - albireo.config.example.ts: the example settings
 
