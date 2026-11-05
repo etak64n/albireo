@@ -2,7 +2,7 @@
 //
 // Copy this file to albireo.config.ts and replace every value. Git ignores
 // albireo.config.ts. Storage access keys are secrets, so they do not go here:
-// see secrets.example.
+// see .env.example.
 
 import { defineAlbireoConfig } from "./config/settings.ts";
 

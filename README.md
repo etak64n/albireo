@@ -531,7 +531,7 @@ aws s3api put-bucket-cors \
   --cors-configuration file://examples/bucket-cors.json
 ```
 
-Step 6: write the access key in a file that Git ignores, such as `.env.production`, with the names in secrets.example.
+Step 6: write the access key in a file that Git ignores, such as `.env.production`, with the names in `.env.example`.
 
 ```dotenv
 # .env.production: the access key of the production bucket
@@ -635,7 +635,7 @@ With `"local-r2"`, `cf dev` keeps an R2 bucket named albireo-local on your machi
 With `"s3"`, you write a storage like `production.storage`, for a bucket that holds no production videos.
 
 - Its endpoint may also be an `http://` origin on localhost, 127.0.0.1, or [::1], such as a storage server on your machine (config/settings.ts).
-- Copy secrets.example to `.env` and fill in the keys of that bucket.
+- Copy `.env.example` to `.env` and fill in the keys of that bucket.
 - Add the address of the dev server to the CORS settings of that bucket.
 
 ### Local data
@@ -683,7 +683,7 @@ This is albireo.config.example.ts. Copy it to albireo.config.ts and replace ever
 //
 // Copy this file to albireo.config.ts and replace every value. Git ignores
 // albireo.config.ts. Storage access keys are secrets, so they do not go here:
-// see secrets.example.
+// see .env.example.
 
 import { defineAlbireoConfig } from "./config/settings.ts";
 
