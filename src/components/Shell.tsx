@@ -168,8 +168,9 @@ function MenuPanel() {
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto px-2 pb-4 sm:px-3">
-      {/* The same button and name as in the header, so the menu closes from where it opened. */}
-      <div className="-mx-0.5 flex h-14 shrink-0 items-center gap-1.5 sm:-mx-1">
+      {/* The same button and name as in the header, so the menu closes from where it opened.
+          The row trades the padding of the menu for the padding of the header. */}
+      <div className="-mx-2 flex h-14 shrink-0 items-center gap-1.5 px-2 sm:-mx-3 sm:px-4">
         <SheetClose asChild>
           <Button variant="ghost" size="icon-lg" aria-label="Close the menu">
             <MenuIcon />
