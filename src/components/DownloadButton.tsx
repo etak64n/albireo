@@ -24,7 +24,7 @@ export function DownloadButton({ attachment, compact = false }: { attachment: Vi
   }
 
   return (
-    <Button asChild size="sm">
+    <Button asChild>
       <a href={attachment.downloadUrl} download={attachment.fileName} onClick={handleClick} aria-busy={busy}>
         {busy ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
         <span className={compact ? "max-sm:sr-only" : undefined}>Download</span>

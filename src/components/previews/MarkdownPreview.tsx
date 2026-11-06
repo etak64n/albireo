@@ -12,7 +12,7 @@ export default function MarkdownPreview({ url }: { url: string }) {
   if (error) return <p className="error-box m-4">{error}</p>;
   if (text === null) return <Spinner />;
   return (
-    <article className="markdown mx-auto my-4 max-w-3xl bg-surface px-8 py-10 shadow-card">
+    <article className="markdown mx-auto my-4 max-w-3xl rounded-sm bg-surface px-8 py-10 shadow-[0_0_0_1px_var(--theme-border)]">
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={{ a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noreferrer" /> }}

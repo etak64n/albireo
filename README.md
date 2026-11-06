@@ -260,7 +260,8 @@ All videos (`/videos`) lists every series, then every video from the newest, 48 
 History (`/history`) lists the videos that the person watched, from the last watched.
 The player records a video when its playback starts, and each person sees only their own history (worker/app.ts).
 
-The left menu, opened with the button in the upper left corner, links to the three lists and to every series.
+The sidebar on the left links to the three lists and to every series.
+On screens narrower than 1024px, the sidebar hides, and the menu button in the upper left corner opens it over the page.
 Dates show as YYYY/MM/DD (src/lib/format.ts, `formatDate`).
 
 ### Search
@@ -780,7 +781,7 @@ Every setting is required, and a key that albireo does not read is an error, whi
   - A list of lowercase email addresses. The list may be empty.
   - Every admin must also be in `production.access.allow`, so that they can sign in.
 - `appearance.siteName`
-  - The name in the header and in the title of every page
+  - The name in the sidebar and in the title of every page
   - 1 to 40 characters that do not start or end with a space
 - `appearance.theme`
   - The theme folder, relative to the project root. [Themes](#themes) describes its files.
@@ -822,11 +823,14 @@ A theme is a folder with two files: theme.css for the colors, corners, shadows, 
 
 theme.css sets these variables, and src/styles.css turns them into the styles of the app.
 
-- Surfaces: `--theme-page`, `--theme-surface`, `--theme-raised`, and `--theme-line`
-- Text: `--theme-text`, `--theme-muted`, and `--theme-heading`
-- Actions: `--theme-primary`, `--theme-primary-hover`, `--theme-on-primary`, `--theme-accent`, and `--theme-danger`
-- Shape: `--theme-radius`, `--theme-shadow`, and `--theme-shadow-lift`
-- Fonts: `--theme-font-body` and `--theme-font-heading`
+- Accent: `--theme-accent`, `--theme-accent-hover`, `--theme-accent-subtle`, `--theme-on-accent`, and `--theme-focus-ring`
+- Text: `--theme-text-heading`, `--theme-text-strong`, `--theme-text-control`, `--theme-text`, `--theme-text-label`, `--theme-text-subdued`, and `--theme-text-placeholder`
+- Surfaces and lines: `--theme-surface`, `--theme-surface-subdued`, `--theme-surface-hover`, `--theme-border`, and `--theme-hairline`
+- Status: `--theme-positive` and `--theme-critical`
+- Labels over pictures and the shade under dialogs: `--theme-overlay`, `--theme-on-overlay`, and `--theme-scrim`
+- Corners: `--theme-radius-xs`, `--theme-radius-sm`, `--theme-radius-md`, `--theme-radius-lg`, and `--theme-radius-xl`
+- Shadows of what floats over the page: `--theme-shadow-tooltip` and `--theme-shadow-popover`
+- Fonts: `--theme-font` and `--theme-font-mono`
 
 The logo also becomes the favicon (src/main.tsx).
 When either file is missing, `cf dev` and the build stop with an error, so a typo in the path does not ship an unstyled library (vite.config.ts).

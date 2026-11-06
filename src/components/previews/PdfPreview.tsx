@@ -44,7 +44,7 @@ export default function PdfPreview({ url }: { url: string }) {
           className="grid gap-4"
         >
           {Array.from({ length: pages }, (_, index) => (
-            <Page key={index} pageNumber={index + 1} width={width} loading={null} className="bg-surface shadow-card" />
+            <Page key={index} pageNumber={index + 1} width={width} loading={null} className="bg-surface shadow-[0_0_0_1px_var(--theme-border)]" />
           ))}
         </Document>
       )}

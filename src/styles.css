@@ -6,48 +6,67 @@
    appearance.theme in albireo.config.ts names. Its theme.css sets the --theme-*
    variables, and the names below turn them into Tailwind utilities. */
 @theme inline {
-  --color-page: var(--theme-page);
-  --color-surface: var(--theme-surface);
-  --color-raised: var(--theme-raised);
-  --color-line: var(--theme-line);
-  --color-ink: var(--theme-text);
-  --color-muted: var(--theme-muted);
-  --color-heading: var(--theme-heading);
-  --color-primary: var(--theme-primary);
-  --color-primary-hover: var(--theme-primary-hover);
-  --color-on-primary: var(--theme-on-primary);
   --color-accent: var(--theme-accent);
-  --color-danger: var(--theme-danger);
-  --radius-ui: var(--theme-radius);
-  --shadow-card: var(--theme-shadow);
-  --shadow-lift: var(--theme-shadow-lift);
-  --font-sans: var(--theme-font-body);
-  --font-heading: var(--theme-font-heading);
+  --color-accent-hover: var(--theme-accent-hover);
+  --color-accent-subtle: var(--theme-accent-subtle);
+  --color-on-accent: var(--theme-on-accent);
+  --color-heading: var(--theme-text-heading);
+  --color-strong: var(--theme-text-strong);
+  --color-control: var(--theme-text-control);
+  --color-ink: var(--theme-text);
+  --color-label: var(--theme-text-label);
+  --color-subdued: var(--theme-text-subdued);
+  --color-placeholder: var(--theme-text-placeholder);
+  --color-surface: var(--theme-surface);
+  --color-surface-subdued: var(--theme-surface-subdued);
+  --color-surface-hover: var(--theme-surface-hover);
+  --color-border: var(--theme-border);
+  --color-hairline: var(--theme-hairline);
+  --color-positive: var(--theme-positive);
+  --color-critical: var(--theme-critical);
+  --color-overlay: var(--theme-overlay);
+  --color-on-overlay: var(--theme-on-overlay);
+  --color-scrim: var(--theme-scrim);
+  --radius-xs: var(--theme-radius-xs);
+  --radius-sm: var(--theme-radius-sm);
+  --radius-md: var(--theme-radius-md);
+  --radius-lg: var(--theme-radius-lg);
+  --radius-xl: var(--theme-radius-xl);
+  --shadow-tooltip: var(--theme-shadow-tooltip);
+  --shadow-popover: var(--theme-shadow-popover);
+  --font-sans: var(--theme-font);
+  --font-mono: var(--theme-font-mono);
 }
 
+/* The sizes of the app, which every theme shares. Text comes in five sizes: 12px
+   (text-xs), 14px (text-sm), 16px (text-base), 20px (text-figure) for the headings of
+   sections, and 28px (text-display) for the headings of pages. */
 @theme {
-  --animate-appear: appear 300ms ease-out both;
-
-  @keyframes appear {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-  }
+  --text-figure: 20px;
+  --text-figure--line-height: 28px;
+  --text-display: 28px;
+  --text-display--line-height: 36px;
+  --spacing-sidebar: 240px;
+  --spacing-topbar: 60px;
+  --spacing-gutter: 40px;
+  --container-content: 1280px;
 }
 
 body {
   min-height: 100vh;
-  background: var(--theme-page);
+  background: var(--theme-surface);
   color: var(--theme-text);
-  font-family: var(--theme-font-body);
+  font-family: var(--theme-font);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 20px;
+  /* Japanese text breaks lines by its own rules. */
+  line-break: strict;
 }
 
+/* Keyboard focus: a light blue ring of 4px around the part. */
 :focus-visible {
-  outline: 2px solid var(--theme-accent);
-  outline-offset: 2px;
+  outline: 4px solid var(--theme-focus-ring);
+  outline-offset: 0;
 }
 
 /* Decoration stops for people who ask for less motion. */
@@ -62,47 +81,45 @@ body {
 }
 
 @layer components {
-  .panel {
-    @apply rounded-ui border border-line bg-surface shadow-card;
-  }
-
-  .heading {
-    @apply font-heading font-bold text-heading;
-  }
-
+  /* A text field: as tall as a button, with a line of 1px drawn by a shadow, so that
+     it lines up with the buttons beside it. Fields grow to 44px for fingers, with
+     16px text, which keeps iPhone from zooming in. */
   .field {
-    @apply w-full rounded-ui border border-line bg-surface px-3 text-sm text-ink placeholder:text-muted focus:border-accent pointer-coarse:min-h-11 pointer-coarse:text-base;
+    @apply h-7 w-full rounded-sm bg-surface px-2 text-sm text-ink shadow-[0_0_0_1px_var(--theme-border)] placeholder:text-placeholder disabled:bg-surface-subdued disabled:text-subdued pointer-coarse:min-h-11 pointer-coarse:text-base;
+  }
+
+  textarea.field {
+    @apply h-auto py-1;
   }
 
   .error-box {
-    @apply rounded-ui border border-danger/40 bg-danger/10 px-3 py-2 text-[13px] font-bold text-danger;
+    @apply rounded-sm bg-critical/10 px-3 py-2 text-sm font-semibold text-critical;
   }
 
-  /* A card that lifts toward the viewer on hover, as videos and series do. */
-  .card {
-    @apply overflow-hidden rounded-ui border border-line bg-surface shadow-card transition duration-200 ease-out;
+  /* Numbers line up in columns. */
+  .numeric {
+    font-variant-numeric: tabular-nums;
   }
 }
 
 /* The Video.js player takes the theme: its corners, the accent for the bars and the
-   highlighted controls, and the body font. The whole picture shows, with bars around
-   a video of another shape. The skin reads only these public variables. */
+   highlighted controls, and the font. The whole picture shows, with bars around a
+   video of another shape. The skin reads only these public variables. */
 .albireo-player {
-  --media-border-radius: var(--theme-radius);
+  --media-border-radius: var(--theme-radius-md);
   --media-accent-color: var(--theme-accent);
-  --media-font-family: var(--theme-font-body);
+  --media-font-family: var(--theme-font);
   --media-object-fit: contain;
   --media-object-position: center;
   width: 100%;
   aspect-ratio: 16 / 9;
-  box-shadow: var(--theme-shadow-lift);
 }
 
 /* Markdown previews in the theme. Headings stand out by size and weight only. */
 @layer components {
   .markdown {
     color: var(--theme-text);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.75;
     overflow-wrap: anywhere;
   }
@@ -111,8 +128,7 @@ body {
   }
   .markdown :is(h1, h2, h3, h4, h5, h6) {
     margin-top: 1.6em;
-    color: var(--theme-heading);
-    font-family: var(--theme-font-heading);
+    color: var(--theme-text-strong);
     font-weight: 700;
     line-height: 1.3;
   }
@@ -120,13 +136,13 @@ body {
     margin-top: 0;
   }
   .markdown h1 {
-    font-size: 1.9em;
+    font-size: 1.75em;
   }
   .markdown h2 {
-    font-size: 1.5em;
+    font-size: 1.25em;
   }
   .markdown h3 {
-    font-size: 1.2em;
+    font-size: 1em;
   }
   .markdown ul {
     padding-left: 1.5em;
@@ -140,26 +156,27 @@ body {
     margin-top: 0.25em;
   }
   .markdown a {
-    color: var(--theme-heading);
+    color: var(--theme-accent);
+    font-weight: 600;
+  }
+  .markdown a:hover {
     text-decoration: underline;
-    text-decoration-color: var(--theme-accent);
-    text-underline-offset: 2px;
   }
   .markdown strong {
-    color: var(--theme-heading);
+    color: var(--theme-text-strong);
   }
   .markdown code {
     padding: 0.1em 0.35em;
-    border-radius: var(--theme-radius);
-    background: var(--theme-raised);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    border-radius: var(--theme-radius-xs);
+    background: var(--theme-surface-subdued);
+    font-family: var(--theme-font-mono);
     font-size: 0.88em;
   }
   .markdown pre {
     overflow-x: auto;
     padding: 1em;
-    border-radius: var(--theme-radius);
-    background: var(--theme-raised);
+    border-radius: var(--theme-radius-sm);
+    background: var(--theme-surface-subdued);
   }
   .markdown pre code {
     padding: 0;
@@ -167,26 +184,28 @@ body {
   }
   .markdown blockquote {
     padding-left: 1.25em;
-    color: var(--theme-muted);
+    color: var(--theme-text-subdued);
   }
   .markdown table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.95em;
+    font-size: 14px;
   }
   .markdown :is(th, td) {
-    padding: 0.4em 0.7em;
-    border: 1px solid var(--theme-line);
+    padding: 0.5em 0.75em;
+    border-bottom: 1px solid var(--theme-hairline);
     text-align: left;
   }
   .markdown th {
-    background: var(--theme-raised);
-    color: var(--theme-heading);
+    border-bottom-color: var(--theme-border);
+    color: var(--theme-text-label);
+    font-size: 12px;
+    font-weight: 600;
   }
   .markdown hr {
     margin: 2em 0;
     border: 0;
-    border-top: 1px solid var(--theme-line);
+    border-top: 1px solid var(--theme-border);
   }
   .markdown img {
     max-width: 100%;
@@ -197,5 +216,6 @@ body {
   }
   .markdown input[type="checkbox"] {
     margin-right: 0.4em;
+    accent-color: var(--theme-accent);
   }
 }

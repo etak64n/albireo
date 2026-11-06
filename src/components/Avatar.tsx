@@ -1,15 +1,16 @@
 import { Avatar as AvatarPrimitive } from "radix-ui";
 import { cn } from "../lib/utils.ts";
 
-const SIZES = { tiny: "size-6", small: "size-8", large: "size-14", huge: "size-24" } as const;
+/** "control" matches the height of a button, and "large" the picture beside the heading of a page. */
+const SIZES = { tiny: "size-5", control: "size-7", small: "size-8", large: "size-14", huge: "size-24" } as const;
 
 /**
- * The picture of a person in a circle, the only round shape of the app. Without a picture
- * of their own, or while it loads, a person shape stands in for it.
+ * The picture of a person in a circle. Without a picture of their own, or while it
+ * loads, a person shape stands in for it.
  */
 export function Avatar({ url, size = "small", className }: { url: string | null; size?: keyof typeof SIZES; className?: string }) {
   return (
-    <AvatarPrimitive.Root aria-hidden="true" className={cn("block shrink-0 overflow-hidden rounded-full bg-raised text-muted", SIZES[size], className)}>
+    <AvatarPrimitive.Root aria-hidden="true" className={cn("block shrink-0 overflow-hidden rounded-full bg-surface-subdued text-placeholder", SIZES[size], className)}>
       {url !== null && <AvatarPrimitive.Image src={url} alt="" className="size-full object-cover" />}
       <AvatarPrimitive.Fallback delayMs={url === null ? 0 : 300} className="block size-full">
         <svg viewBox="0 0 32 32" className="size-full" fill="currentColor">

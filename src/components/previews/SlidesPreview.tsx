@@ -17,7 +17,7 @@ export default function SlidesPreview({ url }: { url: string }) {
       defaultZoom="fit-width"
       height="100%"
       showThumbnails={false}
-      viewportStyle={{ background: "var(--theme-raised)" }}
+      viewportStyle={{ background: "var(--theme-surface-subdued)" }}
       fonts={{ fallbackFamilies: FALLBACK_FONTS }}
       renderLoading={() => <Spinner />}
       renderError={(error) => <p className="error-box m-4">The slides could not be opened: {error.message}</p>}

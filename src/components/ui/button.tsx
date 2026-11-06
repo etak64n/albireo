@@ -7,21 +7,24 @@ import type { ComponentProps } from "react";
 import { cn } from "../../lib/utils.ts";
 
 export const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-ui font-bold whitespace-nowrap transition duration-150 ease-out disabled:pointer-events-none disabled:opacity-45 pointer-coarse:min-h-11 pointer-coarse:min-w-11 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-sm font-semibold whitespace-nowrap transition-colors duration-150 disabled:pointer-events-none pointer-coarse:min-h-11 pointer-coarse:min-w-11 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        primary: "bg-primary text-on-primary hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-lift",
-        secondary: "border border-line bg-surface text-heading hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lift",
-        ghost: "text-heading hover:bg-raised",
-        danger: "bg-danger text-white hover:-translate-y-0.5 hover:shadow-lift",
+        // The button of most actions: white, with a line of 1px drawn by a shadow. A disabled one keeps its line.
+        secondary: "bg-surface text-control shadow-[0_0_0_1px_var(--theme-border)] hover:bg-surface-subdued disabled:text-subdued",
+        // The one most important action of a screen.
+        primary: "bg-accent text-on-accent hover:bg-accent-hover disabled:opacity-50",
+        // Buttons without a line, such as the menu button and the actions in a row.
+        ghost: "text-control hover:bg-surface-hover disabled:text-subdued",
+        // An action that cannot be undone, in the dialog that asks first.
+        danger: "bg-critical text-on-accent hover:opacity-90 disabled:opacity-50",
       },
       size: {
-        sm: "h-7 px-3 text-xs",
-        md: "h-8 px-3.5 text-[13px]",
-        lg: "h-9 px-4 text-[13px]",
-        icon: "size-8",
-        "icon-lg": "size-10 [&_svg:not([class*='size-'])]:size-5",
+        sm: "h-6 px-2 text-xs",
+        md: "h-7 px-2 text-sm",
+        lg: "h-9 px-3 text-sm",
+        icon: "size-7",
       },
     },
     defaultVariants: { variant: "secondary", size: "md" },

@@ -22,8 +22,8 @@ export function AttachmentPreview({ attachment, onClose }: { attachment: VideoAt
       <DialogContent className="flex h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-6xl flex-col gap-0 overflow-hidden p-0">
         {attachment !== null && (
           <>
-            <header className="flex items-center gap-2 border-b border-line px-4 py-2.5">
-              <DialogTitle className="min-w-0 flex-1 truncate text-base">{attachment.fileName}</DialogTitle>
+            <header className="flex items-center gap-2 border-b border-hairline px-4 py-3">
+              <DialogTitle className="min-w-0 flex-1 truncate text-base font-semibold">{attachment.fileName}</DialogTitle>
               <DownloadButton attachment={attachment} />
               <DialogClose asChild>
                 <Button variant="ghost" size="icon" aria-label="Close the preview">
@@ -31,7 +31,7 @@ export function AttachmentPreview({ attachment, onClose }: { attachment: VideoAt
                 </Button>
               </DialogClose>
             </header>
-            <div className="min-h-0 flex-1 overflow-auto bg-raised">
+            <div className="min-h-0 flex-1 overflow-auto bg-surface-subdued">
               <Suspense fallback={<Spinner />}>
                 {kind === "pdf" && <PdfPreview url={attachment.viewUrl} />}
                 {kind === "slides" && <SlidesPreview url={attachment.viewUrl} />}

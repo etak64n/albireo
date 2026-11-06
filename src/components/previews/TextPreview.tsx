@@ -7,7 +7,7 @@ export default function TextPreview({ url }: { url: string }) {
   if (error) return <p className="error-box m-4">{error}</p>;
   if (text === null) return <Spinner />;
   return (
-    <pre className="mx-auto my-4 max-w-4xl bg-surface p-6 font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap shadow-card">
+    <pre className="mx-auto my-4 max-w-4xl rounded-sm bg-surface p-6 font-mono text-sm leading-relaxed break-words whitespace-pre-wrap shadow-[0_0_0_1px_var(--theme-border)]">
       {text}
     </pre>
   );

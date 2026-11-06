@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { VideoSummary } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { PageHeader } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { VideoGrid, VideoGridSkeleton } from "../components/VideoGrid.tsx";
@@ -45,14 +46,14 @@ export function SearchPage() {
 
   return (
     <Shell>
-      {query !== "" && <h1 className="heading text-2xl break-words">Results for “{query}”</h1>}
+      {query !== "" && <PageHeader title={`Results for “${query}”`} />}
       {error && <p className="error-box">{error}</p>}
       {videos === null && query !== "" && error === "" && <VideoGridSkeleton />}
       {videos !== null && (
-        <section className="grid gap-3">
+        <section className="grid gap-4">
           <VideoGrid videos={videos} />
           {nextCursor !== null && (
-            <div className="text-center">
+            <div className="pt-4 text-center">
               <Button onClick={() => void loadMore()} disabled={loadingMore}>
                 {loadingMore ? "Loading..." : "Load more"}
               </Button>

@@ -8,6 +8,7 @@ import { put } from "../lib/upload.ts";
 import { AttachmentPreview } from "./AttachmentPreview.tsx";
 import { ConfirmDialog } from "./ConfirmDialog.tsx";
 import { DownloadButton } from "./DownloadButton.tsx";
+import { Section } from "./Page.tsx";
 import { Button } from "./ui/button.tsx";
 
 /**
@@ -51,10 +52,10 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
   }
 
   return (
-    <section className="panel grid gap-3 p-5" aria-label="Attachments">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="heading text-lg">Attachments</h2>
-        {video.canEdit && (
+    <Section
+      title="Attachments"
+      actions={
+        video.canEdit ? (
           <>
             <input ref={input} type="file" onChange={choose} className="hidden" />
             <Button onClick={() => input.current?.click()} disabled={uploading !== null}>
@@ -62,27 +63,28 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
               Attach
             </Button>
           </>
-        )}
-      </div>
+        ) : undefined
+      }
+    >
       {uploading !== null && (
-        <p className="truncate text-xs font-bold text-muted tabular-nums">
+        <p role="status" className="numeric truncate text-xs text-subdued">
           Uploading {uploading.fileName} {uploading.percent}%
         </p>
       )}
       {error && <p className="error-box">{error}</p>}
       {video.attachments.length > 0 && (
-        <ul className="grid divide-y divide-line border-y border-line">
+        <ul className="grid divide-y divide-hairline border-y border-hairline">
           {video.attachments.map((attachment) => {
             const kind = previewKindOf(attachment.fileName);
             return (
-              <li key={attachment.id} className="flex items-center gap-3 py-2.5">
+              <li key={attachment.id} className="flex items-center gap-3 py-2">
                 <KindIcon kind={kind} />
                 <div className="grid min-w-0 flex-1">
-                  <span className="truncate text-sm font-bold text-heading">{attachment.fileName}</span>
-                  <span className="text-xs font-bold text-muted tabular-nums">{formatBytes(attachment.fileSize)}</span>
+                  <span className="truncate text-sm font-semibold text-strong">{attachment.fileName}</span>
+                  <span className="numeric text-xs text-subdued">{formatBytes(attachment.fileSize)}</span>
                 </div>
                 {kind !== null && (
-                  <Button size="sm" onClick={() => setPreviewing(attachment)}>
+                  <Button onClick={() => setPreviewing(attachment)}>
                     <Eye aria-hidden="true" />
                     <span className="max-sm:sr-only">Preview</span>
                   </Button>
@@ -92,7 +94,7 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7 text-muted hover:text-ink"
+                    className="text-subdued"
                     aria-label={`Remove ${attachment.fileName}`}
                     onClick={() => setRemoving(attachment)}
                   >
@@ -117,14 +119,14 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
           setRemoving(null);
         }}
       >
-        {removing !== null && <p className="truncate text-sm text-muted">{removing.fileName}</p>}
+        {removing !== null && <p className="truncate text-sm text-label">{removing.fileName}</p>}
       </ConfirmDialog>
-    </section>
+    </Section>
   );
 }
 
 function KindIcon({ kind }: { kind: PreviewKind | null }) {
-  const className = "size-5 shrink-0 text-muted";
+  const className = "size-4 shrink-0 text-subdued";
   if (kind === "slides") return <Presentation className={className} aria-hidden="true" />;
   if (kind === "image") return <FileImage className={className} aria-hidden="true" />;
   if (kind === null) return <File className={className} aria-hidden="true" />;

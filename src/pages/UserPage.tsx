@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { SeriesSummary, UserProfile, VideoSummary } from "../../shared/api.ts";
 import { ApiError, api } from "../api.ts";
 import { Avatar } from "../components/Avatar.tsx";
+import { Section } from "../components/Page.tsx";
 import { SeriesGrid } from "../components/SeriesGrid.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
@@ -67,46 +68,43 @@ export function UserPage({ id }: { id: string }) {
         <p className="error-box">{error instanceof Error ? error.message : String(error)}</p>
       ) : user === null || profile === null ? (
         <>
-          <div className="flex items-center gap-6 border-b border-line pb-8" role="status" aria-label="Loading">
-            <Skeleton className="size-24 rounded-full" />
-            <div className="grid flex-1 gap-3">
-              <Skeleton className="h-9 w-1/3" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
+          <div className="flex items-center gap-4" role="status" aria-label="Loading">
+            <Skeleton className="size-14 rounded-full" />
+            <Skeleton className="h-9 w-1/3" />
           </div>
           <VideoGridSkeleton count={3} />
         </>
       ) : (
         <>
-          <section className="flex animate-appear flex-wrap items-center gap-6 border-b border-line pb-8">
-            <Avatar url={profile.avatarUrl} size="huge" />
-            <div className="grid min-w-0 flex-1 gap-2">
-              <h1 className="heading truncate text-4xl leading-tight">{profile.displayName}</h1>
-              {profile.bio && <p className="max-w-2xl text-[15px] leading-relaxed whitespace-pre-wrap text-ink">{profile.bio}</p>}
-            </div>
-            {isMe && (
-              <Button asChild>
-                <Link to="/settings">Edit profile</Link>
-              </Button>
-            )}
-          </section>
-          {series.length > 0 && (
-            <section className="grid gap-3">
-              <h2 className="heading text-xl">Series</h2>
-              <SeriesGrid series={series} />
-            </section>
-          )}
-          <section className="grid gap-3">
-            <h2 className="heading text-xl">Videos</h2>
-            <VideoGrid videos={videos} />
-            {nextCursor !== null && (
-              <div className="text-center">
-                <Button variant="secondary" onClick={() => void loadMore()} disabled={loadingMore}>
-                  {loadingMore ? "Loading..." : "Load more"}
+          <header className="grid gap-4">
+            <div className="flex items-center gap-4">
+              <Avatar url={profile.avatarUrl} size="large" />
+              <h1 className="min-w-0 flex-1 truncate text-display font-bold text-strong">{profile.displayName}</h1>
+              {isMe && (
+                <Button asChild>
+                  <Link to="/settings">Edit profile</Link>
                 </Button>
-              </div>
-            )}
-          </section>
+              )}
+            </div>
+            {profile.bio && <p className="max-w-[75ch] text-sm leading-relaxed break-words whitespace-pre-wrap">{profile.bio}</p>}
+          </header>
+          {series.length > 0 && (
+            <Section title="Series">
+              <SeriesGrid series={series} />
+            </Section>
+          )}
+          {videos.length > 0 && (
+            <Section title="Videos">
+              <VideoGrid videos={videos} />
+              {nextCursor !== null && (
+                <div className="pt-4 text-center">
+                  <Button onClick={() => void loadMore()} disabled={loadingMore}>
+                    {loadingMore ? "Loading..." : "Load more"}
+                  </Button>
+                </div>
+              )}
+            </Section>
+          )}
         </>
       )}
     </Shell>

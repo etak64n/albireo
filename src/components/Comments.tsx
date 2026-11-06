@@ -8,6 +8,7 @@ import { Link } from "../router.tsx";
 import { useSession } from "../session.tsx";
 import { Avatar } from "./Avatar.tsx";
 import { ConfirmDialog } from "./ConfirmDialog.tsx";
+import { Section } from "./Page.tsx";
 import { Button } from "./ui/button.tsx";
 import { Textarea } from "./ui/field.tsx";
 
@@ -54,15 +55,14 @@ export function Comments({
   }
 
   return (
-    <section className="panel grid gap-5 p-5" aria-label="Comments">
-      <h2 className="heading text-lg">Comments</h2>
+    <Section title="Comments">
       <CommentForm
         videoId={videoId}
         onPosted={(comment) => setComments((current) => [comment, ...(current ?? [])])}
       />
       {error && <p className="error-box">{error}</p>}
       {comments !== null && comments.length > 0 && (
-        <ul className="grid gap-5">
+        <ul className="grid gap-6 pt-2">
           {comments.map((comment) => (
             <CommentItem
               key={comment.id}
@@ -75,7 +75,7 @@ export function Comments({
         </ul>
       )}
       {nextCursor !== null && (
-        <div className="text-center">
+        <div className="pt-2 text-center">
           <Button onClick={() => void loadMore()} disabled={loadingMore}>
             {loadingMore ? "Loading..." : "Load more"}
           </Button>
@@ -93,9 +93,9 @@ export function Comments({
           setDeleting(null);
         }}
       >
-        {deleting !== null && <p className="line-clamp-4 text-sm break-words whitespace-pre-wrap text-muted">{deleting.body}</p>}
+        {deleting !== null && <p className="line-clamp-4 text-sm break-words whitespace-pre-wrap text-label">{deleting.body}</p>}
       </ConfirmDialog>
-    </section>
+    </Section>
   );
 }
 
@@ -136,7 +136,7 @@ function CommentForm({ videoId, onPosted }: { videoId: string; onPosted: (commen
           placeholder="Add a comment"
           aria-label="Comment"
         />
-        {error && <p className="text-xs font-bold text-danger">{error}</p>}
+        {error && <p className="text-xs font-semibold text-critical">{error}</p>}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" disabled={posting || text.trim() === ""}>
             {posting ? "Posting..." : "Comment"}
@@ -165,15 +165,15 @@ function CommentItem({
         <Avatar url={comment.author.avatarUrl} />
       </Link>
       <div className="grid min-w-0 flex-1 gap-0.5">
-        <p className="flex flex-wrap items-baseline gap-x-2 text-xs">
-          <Link to={author} className="font-bold text-heading hover:underline">
+        <p className="flex flex-wrap items-baseline gap-x-2">
+          <Link to={author} className="text-sm font-semibold text-strong hover:underline">
             {comment.author.displayName}
           </Link>
-          <time dateTime={comment.createdAt} className="font-bold text-muted tabular-nums">
+          <time dateTime={comment.createdAt} className="numeric text-xs text-subdued">
             {formatDate(comment.createdAt)}
           </time>
         </p>
-        <p className="max-w-3xl text-sm leading-relaxed break-words whitespace-pre-wrap">
+        <p className="max-w-[75ch] text-sm leading-relaxed break-words whitespace-pre-wrap">
           {splitTimes(comment.body, durationSec).map((part, index) =>
             part.kind === "text" ? (
               <Fragment key={index}>{part.text}</Fragment>
@@ -183,7 +183,7 @@ function CommentItem({
                 type="button"
                 onClick={() => onSeek(part.seconds)}
                 aria-label={`Play from ${part.text}`}
-                className="cursor-pointer font-bold text-heading tabular-nums underline decoration-accent decoration-2 underline-offset-2 hover:text-accent"
+                className="numeric cursor-pointer rounded-xs font-semibold text-accent hover:underline"
               >
                 {part.text}
               </button>
@@ -192,7 +192,7 @@ function CommentItem({
         </p>
       </div>
       {comment.canDelete && (
-        <Button variant="ghost" size="icon" className="size-7 shrink-0 text-muted hover:text-ink" aria-label="Delete the comment" onClick={onDelete}>
+        <Button variant="ghost" size="icon" className="shrink-0 text-subdued" aria-label="Delete the comment" onClick={onDelete}>
           <Trash2 />
         </Button>
       )}

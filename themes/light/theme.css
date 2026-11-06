@@ -1,22 +1,56 @@
-/* Light: white surfaces on a soft gray page, black for actions, and a little gold from the logo.
-   Every value below is a theme variable that src/styles.css reads. */
+/* Light: a quiet, dense look. White surfaces, blue-gray text and lines, and one
+   indigo accent for what can be pressed or is selected. Every value below is a
+   theme variable that src/styles.css reads. */
 :root {
   color-scheme: light;
-  --theme-page: #f5f5f6;
+
+  /* Accent: links, the page that is open, selected items, and the primary button. */
+  --theme-accent: #533afd;
+  --theme-accent-hover: #4434d4;
+  --theme-accent-subtle: #eae7ff;
+  --theme-on-accent: #ffffff;
+  /* The 4px ring around the part that the keyboard selected. */
+  --theme-focus-ring: rgb(1 150 237 / 0.36);
+
+  /* Text, from the darkest to the lightest. */
+  --theme-text-heading: #30313d;
+  --theme-text-strong: #1a2c44;
+  --theme-text-control: #273951;
+  --theme-text: #414552;
+  --theme-text-label: #3c4f69;
+  --theme-text-subdued: #667691;
+  --theme-text-placeholder: #a3acba;
+
+  /* Surfaces and lines. */
   --theme-surface: #ffffff;
-  --theme-raised: #f0f0f2;
-  --theme-line: #e4e4e7;
-  --theme-text: #222226;
-  --theme-muted: #6b6b74;
-  --theme-heading: #111113;
-  --theme-primary: #18181b;
-  --theme-primary-hover: #3f3f46;
-  --theme-on-primary: #ffffff;
-  --theme-accent: #b8862f;
-  --theme-danger: #dc2626;
-  --theme-radius: 0px;
-  --theme-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 6px 18px rgb(0 0 0 / 0.06);
-  --theme-shadow-lift: 0 0 0 1px rgb(0 0 0 / 0.06), 0 16px 36px rgb(0 0 0 / 0.12);
-  --theme-font-body: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
-  --theme-font-heading: var(--theme-font-body);
+  --theme-surface-subdued: #f4f7fa;
+  --theme-surface-hover: #f4f7fa;
+  --theme-border: #d4dee9;
+  --theme-hairline: #ecf1f6;
+
+  /* Status. */
+  --theme-positive: #217005;
+  --theme-critical: #df1b41;
+
+  /* Labels over pictures, such as the length of a video, and the shade under dialogs. */
+  --theme-overlay: #1a2c44;
+  --theme-on-overlay: #ffffff;
+  --theme-scrim: rgb(48 49 61 / 0.5);
+
+  /* Corners, from the smallest: menu items and labels, controls, menus and pictures,
+     groups, and dialogs. 0px everywhere makes a square theme. */
+  --theme-radius-xs: 4px;
+  --theme-radius-sm: 6px;
+  --theme-radius-md: 8px;
+  --theme-radius-lg: 12px;
+  --theme-radius-xl: 16px;
+
+  /* Shadows, only for what floats over the page. */
+  --theme-shadow-tooltip: 0 3px 6px rgb(0 0 0 / 0.12), 0 7px 14px rgb(48 49 61 / 0.08);
+  --theme-shadow-popover: 0 5px 15px rgb(0 0 0 / 0.12), 0 15px 35px rgb(48 49 61 / 0.08);
+
+  /* The system fonts of each OS: Latin first, then Japanese. */
+  --theme-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, "Hiragino Sans", "Yu Gothic UI", "Meiryo UI",
+    "Hiragino Kaku Gothic ProN", sans-serif;
+  --theme-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }

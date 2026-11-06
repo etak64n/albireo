@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { WatchedVideo } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { PageHeader } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { VideoGrid, VideoGridSkeleton } from "../components/VideoGrid.tsx";
 import { usePageTitle } from "../lib/title.ts";
@@ -36,15 +37,15 @@ export function HistoryPage() {
 
   return (
     <Shell>
-      <h1 className="heading text-3xl">History</h1>
+      <PageHeader title="History" />
       {error && <p className="error-box">{error}</p>}
       {videos === null && error === "" && <VideoGridSkeleton />}
       {videos !== null && (
-        <section className="grid gap-3">
+        <section className="grid gap-4">
           <VideoGrid videos={videos} />
           {nextCursor !== null && (
-            <div className="text-center">
-              <Button variant="secondary" onClick={() => void loadMore()} disabled={loadingMore}>
+            <div className="pt-4 text-center">
+              <Button onClick={() => void loadMore()} disabled={loadingMore}>
                 {loadingMore ? "Loading..." : "Load more"}
               </Button>
             </div>

@@ -20,7 +20,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
     if (this.state.error === null) return this.props.children;
     return (
       <div className="grid min-h-screen place-items-center p-6">
-        <div className="panel grid w-full max-w-md gap-4 p-6">
+        <div className="grid w-full max-w-md gap-4">
           <p className="error-box break-words">{this.state.error.message}</p>
           <Button variant="primary" className="w-fit" onClick={() => window.location.reload()}>
             Reload

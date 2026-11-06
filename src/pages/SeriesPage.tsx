@@ -1,21 +1,24 @@
-import { ChevronDown, ChevronUp, EllipsisVertical, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { ChevronDown, ChevronUp, Ellipsis, X } from "lucide-react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import { DESCRIPTION_MAX_LENGTH, TITLE_MAX_LENGTH, type Episode, type SeriesDetail } from "../../shared/api.ts";
 import { ApiError, api } from "../api.ts";
 import { Avatar } from "../components/Avatar.tsx";
+import { Breadcrumb, Section } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Thumbnail } from "../components/Thumbnail.tsx";
+import { Button } from "../components/ui/button.tsx";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu.tsx";
+import { Input, Label, Textarea } from "../components/ui/field.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
-import { formatDate } from "../lib/format.ts";
+import { formatDate, formatDuration } from "../lib/format.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { useLibrary } from "../library.tsx";
-import { Link } from "../router.tsx";
+import { Link, navigate } from "../router.tsx";
 import { useSession } from "../session.tsx";
 import { useUploads } from "../uploads.tsx";
 import { NotFoundPage } from "./NotFoundPage.tsx";
-import { Button } from "../components/ui/button.tsx";
 
+/** The page of a series: its cover, title, and creator, its description, and the table of its episodes. */
 export function SeriesPage({ id }: { id: string }) {
   const { refresh } = useLibrary();
   const [series, setSeries] = useState<SeriesDetail | null>(null);
@@ -61,40 +64,43 @@ export function SeriesPage({ id }: { id: string }) {
         <SeriesSkeleton />
       ) : (
         <>
-          {editing ? (
-            <SeriesEditForm
-              series={series}
-              onSaved={(saved) => {
-                setSeries(saved);
-                setEditing(false);
-                void refresh();
-              }}
-              onCancel={() => setEditing(false)}
-            />
-          ) : (
-            <section className="panel flex animate-appear flex-col gap-5 p-5 sm:flex-row sm:items-start">
-              <div className="w-full shrink-0 overflow-hidden rounded-ui shadow-card sm:w-64">
-                <Thumbnail url={cover} />
-              </div>
-              <div className="grid min-w-0 flex-1 gap-1.5">
-                <div className="flex items-start justify-between gap-3">
-                  <h1 className="heading min-w-0 text-3xl leading-tight break-words">{series.title}</h1>
-                  {series.canEdit && (
-                    <Button variant="secondary" onClick={() => setEditing(true)}>
-                      Edit
-                    </Button>
-                  )}
+          <div className="grid gap-6">
+            <Breadcrumb to="/videos">All videos</Breadcrumb>
+            {editing ? (
+              <SeriesEditForm
+                series={series}
+                onSaved={(saved) => {
+                  setSeries(saved);
+                  setEditing(false);
+                  void refresh();
+                }}
+                onCancel={() => setEditing(false)}
+              />
+            ) : (
+              <header className="grid gap-4">
+                <div className="flex items-start gap-4">
+                  <Thumbnail url={cover} className="w-[100px] shrink-0 rounded-sm" />
+                  <div className="grid min-w-0 flex-1 gap-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <h1 className="min-w-0 text-display font-bold break-words text-strong">{series.title}</h1>
+                      {series.canEdit && (
+                        <Button className="mt-1" onClick={() => setEditing(true)}>
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                    <Link to={`/users/${series.owner.id}`} className="flex w-fit items-center gap-2 text-base text-label hover:underline">
+                      <Avatar url={series.owner.avatarUrl} size="tiny" />
+                      {series.owner.displayName}
+                    </Link>
+                  </div>
                 </div>
-                <Link to={`/users/${series.owner.id}`} className="flex w-fit items-center gap-2 text-[13px] font-bold text-muted hover:text-heading">
-                  <Avatar url={series.owner.avatarUrl} size="tiny" />
-                  {series.owner.displayName}
-                </Link>
-                {series.description && <p className="mt-1 text-[15px] leading-relaxed whitespace-pre-wrap">{series.description}</p>}
-              </div>
-            </section>
-          )}
+                {series.description && <p className="max-w-[75ch] text-sm leading-relaxed break-words whitespace-pre-wrap">{series.description}</p>}
+              </header>
+            )}
+          </div>
           {actionError && <p className="error-box">{actionError}</p>}
-          <EpisodeList
+          <EpisodeTable
             series={series}
             onMove={(episode, direction) => void change(api.moveEpisode(series.id, episode.id, direction))}
             onRemove={(episode) => void change(api.removeEpisode(series.id, episode.id))}
@@ -107,24 +113,35 @@ export function SeriesPage({ id }: { id: string }) {
 
 function SeriesSkeleton() {
   return (
-    <div className="grid gap-8" role="status" aria-label="Loading">
-      <div className="panel flex flex-col gap-5 p-5 sm:flex-row">
-        <Skeleton className="aspect-video w-full shrink-0 sm:w-64" />
-        <div className="grid flex-1 content-start gap-3">
-          <Skeleton className="h-8 w-1/2" />
-          <Skeleton className="h-4 w-1/4" />
+    <div className="grid gap-12" role="status" aria-label="Loading">
+      <div className="grid gap-6">
+        <Skeleton className="h-5 w-20" />
+        <div className="flex items-start gap-4">
+          <Skeleton className="aspect-video w-[100px] shrink-0 rounded-sm" />
+          <div className="grid flex-1 content-start gap-2">
+            <Skeleton className="h-9 w-1/2" />
+            <Skeleton className="h-5 w-32" />
+          </div>
         </div>
       </div>
-      <div className="grid gap-2.5">
+      <div className="grid gap-2">
         {[0, 1, 2].map((index) => (
-          <Skeleton key={index} className="h-24" />
+          <Skeleton key={index} className="h-14" />
         ))}
       </div>
     </div>
   );
 }
 
-function EpisodeList({
+const HEAD = "h-9 px-2 text-left align-middle text-xs font-semibold whitespace-nowrap text-label";
+const CELL = "px-2 py-2 align-middle";
+
+/**
+ * The episodes in order, one row each. A click anywhere on a row opens the episode.
+ * The creator of the series moves an episode, and the creator and the uploader take it
+ * out, from the menu at the end of the row.
+ */
+function EpisodeTable({
   series,
   onMove,
   onRemove,
@@ -136,109 +153,122 @@ function EpisodeList({
   const { me } = useSession();
   if (series.episodes.length === 0) return null;
   const last = series.episodes.length - 1;
+  const canRemove = (episode: Episode) => series.canEdit || episode.uploader?.id === me.id;
+  const hasActions = series.episodes.some(canRemove);
+
+  function open(event: MouseEvent<HTMLTableRowElement>, episode: Episode) {
+    // The link and the menu button handle their own clicks. Clicks in the open menu reach
+    // the row through React too, though the menu is elsewhere on the page.
+    const target = event.target;
+    if (!(target instanceof Element) || !event.currentTarget.contains(target) || target.closest("a, button") !== null) return;
+    navigate(`/videos/${episode.id}`);
+  }
+
   return (
-    <ol className="grid gap-2.5">
-      {series.episodes.map((episode, index) => {
-        // The creator of the series reorders it. The creator and the uploader can take a video out.
-        const canRemove = series.canEdit || episode.uploader?.id === me.id;
-        return (
-          <li key={episode.id} className="card flex animate-appear items-center gap-3 p-2.5 pr-2 hover:shadow-lift sm:gap-4 sm:pr-3">
-            <span className="w-6 shrink-0 text-center font-heading text-lg font-bold text-accent tabular-nums sm:w-8 sm:text-2xl">{episode.episode}</span>
-            <Link to={`/videos/${episode.id}`} className="group flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-              <div className="w-24 shrink-0 overflow-hidden rounded-ui sm:w-36">
-                <Thumbnail url={episode.thumbnailUrl} durationSec={episode.durationSec} />
-              </div>
-              <div className="grid min-w-0 gap-1">
-                <span className="line-clamp-2 font-heading text-base leading-snug font-bold text-heading">{episode.title}</span>
-                <span className="truncate text-xs font-bold text-muted">
-                  {[episode.uploader?.displayName, formatDate(episode.createdAt)]
-                    .filter((part) => part !== undefined && part !== "")
-                    .join(" · ")}
-                </span>
-              </div>
-            </Link>
-            {(series.canEdit || canRemove) && (
-              <EpisodeActions
-                canMove={series.canEdit}
-                canRemove={canRemove}
-                first={index === 0}
-                last={index === last}
-                onMove={(direction) => onMove(episode, direction)}
-                onRemove={() => onRemove(episode)}
-              />
+    <Section title="Episodes">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            <th className={`${HEAD} w-12`}>Episode</th>
+            <th className={HEAD}>Title</th>
+            <th className={`${HEAD} max-sm:hidden`}>Uploaded by</th>
+            <th className={`${HEAD} max-md:hidden`}>Date</th>
+            <th className={`${HEAD} text-right`}>Length</th>
+            {hasActions && (
+              <th className={`${HEAD} w-10`}>
+                <span className="sr-only">Actions</span>
+              </th>
             )}
-          </li>
-        );
-      })}
-    </ol>
+          </tr>
+        </thead>
+        <tbody>
+          {series.episodes.map((episode, index) => (
+            <tr
+              key={episode.id}
+              onClick={(event) => open(event, episode)}
+              className="group cursor-pointer border-b border-hairline transition-colors duration-150 hover:bg-surface-hover has-aria-expanded:bg-surface-hover"
+            >
+              <td className={`${CELL} numeric font-semibold text-strong`}>{episode.episode}</td>
+              <td className={CELL}>
+                <Link to={`/videos/${episode.id}`} className="flex min-w-0 items-center gap-3">
+                  <Thumbnail url={episode.thumbnailUrl} className="w-20 shrink-0 rounded-xs" />
+                  <span className="line-clamp-2 font-semibold break-words text-strong">{episode.title}</span>
+                </Link>
+              </td>
+              <td className={`${CELL} whitespace-nowrap text-strong max-sm:hidden`}>{episode.uploader?.displayName ?? "—"}</td>
+              <td className={`${CELL} numeric whitespace-nowrap text-strong max-md:hidden`}>{formatDate(episode.createdAt)}</td>
+              <td className={`${CELL} numeric text-right whitespace-nowrap text-strong`}>
+                {episode.durationSec === null ? "—" : formatDuration(episode.durationSec)}
+              </td>
+              {hasActions && (
+                <td className={`${CELL} px-1 text-right`}>
+                  {canRemove(episode) && (
+                    <EpisodeMenu
+                      title={episode.title}
+                      canMove={series.canEdit}
+                      first={index === 0}
+                      last={index === last}
+                      onMove={(direction) => onMove(episode, direction)}
+                      onRemove={() => onRemove(episode)}
+                    />
+                  )}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Section>
   );
 }
 
-/** Moving and removing an episode: buttons in the row, and in a menu on phones, where the row is narrow. */
-function EpisodeActions({
+/** The menu at the end of a row. It shows while the pointer is over the row, and always on touch screens. */
+function EpisodeMenu({
+  title,
   canMove,
-  canRemove,
   first,
   last,
   onMove,
   onRemove,
 }: {
+  title: string;
   canMove: boolean;
-  canRemove: boolean;
   first: boolean;
   last: boolean;
   onMove: (direction: "earlier" | "later") => void;
   onRemove: () => void;
 }) {
   return (
-    <>
-      <div className="hidden shrink-0 items-center gap-0.5 sm:flex">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Actions for ${title}`}
+          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 pointer-coarse:opacity-100"
+        >
+          <Ellipsis />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-52">
         {canMove && (
           <>
-            <Button variant="ghost" size="icon" onClick={() => onMove("earlier")} disabled={first} aria-label="Move earlier">
-              <ChevronUp aria-hidden="true" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => onMove("later")} disabled={last} aria-label="Move later">
-              <ChevronDown aria-hidden="true" />
-            </Button>
+            <DropdownMenuItem disabled={first} onSelect={() => onMove("earlier")}>
+              <ChevronUp />
+              Move earlier
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={last} onSelect={() => onMove("later")}>
+              <ChevronDown />
+              Move later
+            </DropdownMenuItem>
           </>
         )}
-        {canRemove && (
-          <Button variant="ghost" size="icon" onClick={onRemove} aria-label="Remove from the series">
-            <X aria-hidden="true" />
-          </Button>
-        )}
-      </div>
-      <div className="shrink-0 sm:hidden">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Episode actions">
-              <EllipsisVertical />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-52">
-            {canMove && (
-              <>
-                <DropdownMenuItem disabled={first} onSelect={() => onMove("earlier")}>
-                  <ChevronUp />
-                  Move earlier
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled={last} onSelect={() => onMove("later")}>
-                  <ChevronDown />
-                  Move later
-                </DropdownMenuItem>
-              </>
-            )}
-            {canRemove && (
-              <DropdownMenuItem onSelect={onRemove}>
-                <X />
-                Remove from the series
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </>
+        <DropdownMenuItem onSelect={onRemove}>
+          <X />
+          Remove from the series
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -268,34 +298,28 @@ function SeriesEditForm({
   }
 
   return (
-    <section className="panel grid gap-2 p-5">
-      <input
-        type="text"
-        value={title}
-        maxLength={TITLE_MAX_LENGTH}
-        onChange={(e) => setTitle(e.target.value)}
-        aria-label="Series title"
-        placeholder="Series title"
-        className="field h-9 font-bold"
-      />
-      <textarea
-        value={description}
-        maxLength={DESCRIPTION_MAX_LENGTH}
-        onChange={(e) => setDescription(e.target.value)}
-        rows={3}
-        aria-label="Description"
-        placeholder="Description"
-        className="field resize-y py-2"
-      />
+    <form
+      className="grid max-w-[75ch] gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (title.trim() !== "") void save();
+      }}
+    >
+      <div className="grid gap-1.5">
+        <Label htmlFor="series-title">Title</Label>
+        <Input id="series-title" value={title} maxLength={TITLE_MAX_LENGTH} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="series-description">Description</Label>
+        <Textarea id="series-description" value={description} maxLength={DESCRIPTION_MAX_LENGTH} onChange={(e) => setDescription(e.target.value)} rows={4} />
+      </div>
       {error && <p className="error-box">{error}</p>}
       <div className="flex gap-2">
-        <Button variant="primary" onClick={() => void save()} disabled={saving || title.trim() === ""}>
+        <Button type="submit" variant="primary" disabled={saving || title.trim() === ""}>
           {saving ? "Saving..." : "Save"}
         </Button>
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
+        <Button onClick={onCancel}>Cancel</Button>
       </div>
-    </section>
+    </form>
   );
 }

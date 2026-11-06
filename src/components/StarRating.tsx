@@ -41,15 +41,15 @@ export function StarRating({
   }
 
   return (
-    <div className="grid justify-items-end gap-1">
-      <div className="flex items-center gap-2.5">
+    <div className="grid justify-items-start gap-1">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <RadioGroup.Root
           value={rating.mine === null ? "" : String(rating.mine)}
           onValueChange={(value) => void save(() => api.rateVideo(videoId, Number(value)))}
           disabled={saving}
           orientation="horizontal"
           aria-label="Your rating"
-          className="flex"
+          className="-ml-0.5 flex"
           onPointerLeave={() => setHovered(null)}
         >
           {STARS.map((stars) => (
@@ -58,27 +58,27 @@ export function StarRating({
               value={String(stars)}
               aria-label={stars === 1 ? "1 star" : `${stars} stars`}
               onPointerEnter={() => setHovered(stars)}
-              className="cursor-pointer p-0.5 transition duration-150 hover:scale-110 disabled:cursor-default pointer-coarse:p-2.5"
+              className="cursor-pointer rounded-xs p-0.5 disabled:cursor-default pointer-coarse:p-2.5"
             >
               <Star
                 aria-hidden="true"
-                className={cn("size-5", stars <= lit ? "fill-current text-accent" : "fill-transparent text-muted")}
+                className={cn("size-[18px] transition-colors duration-150", stars <= lit ? "fill-current text-accent" : "fill-transparent text-placeholder")}
               />
             </RadioGroup.Item>
           ))}
         </RadioGroup.Root>
         {rating.average !== null && (
-          <span className="text-xs font-bold whitespace-nowrap text-muted tabular-nums">
+          <span className="numeric text-xs whitespace-nowrap text-subdued">
             {rating.average.toFixed(1)} ({rating.count})
           </span>
         )}
         {rating.mine !== null && (
-          <Button variant="ghost" size="sm" onClick={() => void save(() => api.clearRating(videoId))} disabled={saving}>
+          <Button variant="ghost" size="sm" className="text-subdued" onClick={() => void save(() => api.clearRating(videoId))} disabled={saving}>
             Clear
           </Button>
         )}
       </div>
-      {error && <p className="text-xs font-bold text-danger">{error}</p>}
+      {error && <p className="text-xs font-semibold text-critical">{error}</p>}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { VideoSummary } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { PageHeader, Section } from "../components/Page.tsx";
 import { SeriesGrid } from "../components/SeriesGrid.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Button } from "../components/ui/button.tsx";
@@ -42,27 +43,25 @@ export function AllVideosPage() {
 
   return (
     <Shell>
-      <h1 className="heading text-3xl">All videos</h1>
+      <PageHeader title="All videos" />
       {error && <p className="error-box">{error}</p>}
       {series !== null && series.length > 0 && (
-        <section className="grid gap-3">
-          <h2 className="heading text-xl">Series</h2>
+        <Section title="Series">
           <SeriesGrid series={series} />
-        </section>
+        </Section>
       )}
       {videos === null && error === "" && <VideoGridSkeleton />}
       {videos !== null && (
-        <section className="grid gap-3">
-          <h2 className="heading text-xl">Videos</h2>
+        <Section title="Videos">
           <VideoGrid videos={videos} />
           {nextCursor !== null && (
-            <div className="text-center">
+            <div className="pt-4 text-center">
               <Button onClick={() => void loadMore()} disabled={loadingMore}>
                 {loadingMore ? "Loading..." : "Load more"}
               </Button>
             </div>
           )}
-        </section>
+        </Section>
       )}
     </Shell>
   );

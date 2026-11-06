@@ -2,8 +2,11 @@ import type { VideoSummary } from "../../shared/api.ts";
 import { Skeleton } from "./ui/skeleton.tsx";
 import { VideoCard } from "./VideoCard.tsx";
 
-/** The columns of every grid of cards: one on phones, two on tablets, three from laptops. */
-export const GRID_CLASS = "grid grid-cols-1 gap-x-5 gap-y-6 sm:grid-cols-2 lg:grid-cols-3";
+/**
+ * The columns of every grid of cards, by the width of the page beside the sidebar: one
+ * on phones, two from 448px, and three from 768px.
+ */
+export const GRID_CLASS = "grid grid-cols-1 gap-x-6 gap-y-8 @md:grid-cols-2 @3xl:grid-cols-3";
 
 export function VideoGrid({ videos }: { videos: VideoSummary[] }) {
   if (videos.length === 0) return null;
@@ -21,9 +24,9 @@ export function VideoGridSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className={GRID_CLASS} role="status" aria-label="Loading">
       {Array.from({ length: count }, (_, index) => (
-        <div key={index} className="card">
-          <Skeleton className="aspect-video" />
-          <div className="flex gap-3 px-4 py-3.5">
+        <div key={index} className="grid content-start gap-3">
+          <Skeleton className="aspect-video rounded-md" />
+          <div className="flex gap-3">
             <Skeleton className="size-8 shrink-0 rounded-full" />
             <div className="grid flex-1 content-start gap-2 pt-0.5">
               <Skeleton className="h-4 w-4/5" />

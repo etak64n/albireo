@@ -22,7 +22,7 @@ export function UploadButton() {
   return (
     <>
       <input ref={inputRef} type="file" accept="video/*" onChange={handleChange} className="hidden" />
-      <Button variant="primary" onClick={() => inputRef.current?.click()} disabled={uploader.progress !== null} aria-label="Upload">
+      <Button onClick={() => inputRef.current?.click()} disabled={uploader.progress !== null} aria-label="Upload" className="max-md:w-7 max-md:px-0">
         <Upload aria-hidden="true" />
         <span className="max-md:hidden">Upload</span>
       </Button>
@@ -39,7 +39,7 @@ export function UploadPanel() {
     return (
       <div className="error-box flex items-start justify-between gap-3">
         <p className="min-w-0 break-words">{error}</p>
-        <Button variant="ghost" size="icon" className="-my-1 size-7 shrink-0 text-danger hover:bg-transparent" aria-label="Dismiss" onClick={uploader.dismissError}>
+        <Button variant="ghost" size="icon" className="-my-1 shrink-0 text-critical hover:bg-transparent" aria-label="Dismiss" onClick={uploader.dismissError}>
           <X />
         </Button>
       </div>
@@ -54,16 +54,12 @@ export function UploadPanel() {
       : `Uploading ${percent}% (${formatBytes(progress.uploadedBytes)} of ${formatBytes(progress.totalBytes)})`;
 
   return (
-    <section className="panel grid gap-2 p-3" aria-label="Upload">
-      <div className="flex min-h-[30px] items-center justify-between gap-3">
-        <p role="status" className="min-w-0 truncate font-bold tabular-nums">{label}</p>
-        {progress.phase !== "finishing" && (
-          <Button variant="secondary" onClick={uploader.cancel}>
-            Cancel
-          </Button>
-        )}
+    <section className="grid gap-3 rounded-md p-3 shadow-[0_0_0_1px_var(--theme-border)]" aria-label="Upload">
+      <div className="flex min-h-7 items-center justify-between gap-3">
+        <p role="status" className="numeric min-w-0 truncate font-semibold text-strong">{label}</p>
+        {progress.phase !== "finishing" && <Button onClick={uploader.cancel}>Cancel</Button>}
       </div>
-      <div className="h-1.5 overflow-hidden rounded-ui bg-raised">
+      <div className="h-1 overflow-hidden rounded-full bg-surface-subdued">
         <div className="h-full bg-accent transition-[width]" style={{ width: `${percent}%` }} />
       </div>
     </section>
@@ -75,8 +71,8 @@ export function DropOverlay() {
   const uploader = useUploads();
   if (!uploader.dragging || uploader.progress !== null) return null;
   return (
-    <div className="pointer-events-none fixed inset-3 z-50 grid place-items-center rounded-ui border-2 border-dashed border-accent bg-page/90 backdrop-blur-sm">
-      <p className="flex items-center gap-2 font-heading text-lg font-bold text-heading">
+    <div className="pointer-events-none fixed inset-3 z-50 grid place-items-center rounded-lg border-2 border-dashed border-accent bg-surface">
+      <p className="flex items-center gap-2 text-figure font-bold text-strong">
         <Upload aria-hidden="true" />
         Drop to upload
       </p>

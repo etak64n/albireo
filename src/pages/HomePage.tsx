@@ -2,6 +2,7 @@ import { Play } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { VideoSummary } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { Section } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Thumbnail } from "../components/Thumbnail.tsx";
 import { buttonVariants } from "../components/ui/button.tsx";
@@ -49,10 +50,9 @@ export function HomePage() {
           <>
             <Feature video={first} />
             {rest.length > 0 && (
-              <section className="grid gap-3">
-                <h2 className="heading text-xl">Recommended</h2>
+              <Section title="Recommended">
                 <VideoGrid videos={rest} />
-              </section>
+              </Section>
             )}
           </>
         )}
@@ -62,9 +62,9 @@ export function HomePage() {
 
 function FeatureSkeleton() {
   return (
-    <div className="card grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]" aria-hidden="true">
-      <Skeleton className="aspect-video" />
-      <div className="grid content-center gap-3 p-6 lg:p-8">
+    <div className={FEATURE_CLASS} aria-hidden="true">
+      <Skeleton className="aspect-video rounded-lg" />
+      <div className="grid content-center gap-3">
         <Skeleton className="h-8 w-3/4" />
         <Skeleton className="h-4 w-1/3" />
         <Skeleton className="mt-2 h-9 w-24" />
@@ -73,19 +73,19 @@ function FeatureSkeleton() {
   );
 }
 
+/** The picture of the first video takes two thirds of a wide page, and the title the rest. */
+const FEATURE_CLASS = "-m-3 grid gap-x-8 gap-y-4 rounded-lg p-3 @3xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]";
+
 /** The video recommended first, large: its picture, and beside it the title and the way to play it. */
 function Feature({ video }: { video: VideoSummary }) {
   const byline = [video.uploader?.displayName, formatDate(video.createdAt)].filter((part) => part !== undefined && part !== "").join(" · ");
   return (
-    <Link
-      to={`/videos/${video.id}`}
-      className="group card grid animate-appear hover:shadow-lift lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
-    >
-      <Thumbnail url={video.thumbnailUrl} durationSec={video.durationSec} />
-      <div className="grid content-center gap-3 p-6 lg:p-8">
-        <h2 className="line-clamp-3 font-heading text-2xl leading-tight font-bold text-heading lg:text-3xl">{video.title}</h2>
-        <p className="text-[13px] font-bold text-muted">{byline}</p>
-        <span className={buttonVariants({ variant: "primary", size: "lg", className: "mt-2 w-fit" })}>
+    <Link to={`/videos/${video.id}`} className={`${FEATURE_CLASS} transition-colors duration-150 hover:bg-surface-hover`}>
+      <Thumbnail url={video.thumbnailUrl} durationSec={video.durationSec} className="rounded-lg" />
+      <div className="grid content-center justify-items-start gap-2">
+        <h2 className="line-clamp-3 text-display font-bold break-words text-heading">{video.title}</h2>
+        <p className="numeric text-base text-label">{byline}</p>
+        <span className={buttonVariants({ variant: "primary", size: "lg", className: "mt-3" })}>
           <Play className="fill-current" aria-hidden="true" />
           Play
         </span>

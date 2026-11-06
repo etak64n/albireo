@@ -4,6 +4,7 @@ import Cropper from "react-easy-crop";
 import { BIO_MAX_LENGTH, DISPLAY_NAME_MAX_LENGTH } from "../../shared/api.ts";
 import { api } from "../api.ts";
 import { Avatar } from "../components/Avatar.tsx";
+import { PageHeader } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog.tsx";
@@ -87,10 +88,11 @@ export function SettingsPage() {
 
   return (
     <Shell>
-      <div className="mx-auto grid w-full max-w-[720px] gap-4">
-        <h1 className="heading text-3xl">Profile settings</h1>
-        <section className="panel grid gap-6 p-6">
-          <div className="flex flex-wrap items-center gap-5">
+      <PageHeader title="Profile settings" />
+      <div className="grid w-full max-w-[560px] gap-6">
+        <div className="grid gap-1.5">
+          <span className="text-sm font-semibold text-strong">Picture</span>
+          <div className="flex flex-wrap items-center gap-4">
             <Avatar url={shown} size="huge" />
             <div className="flex flex-wrap gap-2">
               <input ref={input} type="file" accept="image/*" onChange={choose} className="hidden" />
@@ -98,43 +100,43 @@ export function SettingsPage() {
               {shown !== null && <Button onClick={() => setPicture({ kind: "remove" })}>Remove</Button>}
             </div>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="display-name">Display name</Label>
-            <Input
-              id="display-name"
-              value={displayName}
-              maxLength={DISPLAY_NAME_MAX_LENGTH}
-              onChange={(e) => {
-                setDisplayName(e.target.value);
-                setSaved(false);
-              }}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              maxLength={BIO_MAX_LENGTH}
-              rows={4}
-              onChange={(e) => {
-                setBio(e.target.value);
-                setSaved(false);
-              }}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-[13px] font-bold text-heading">Email</span>
-            <p className="text-sm text-muted">{me.email}</p>
-          </div>
-          {error && <p className="error-box">{error}</p>}
-          <div className="flex items-center gap-3">
-            <Button variant="primary" onClick={() => void save()} disabled={saving || !changed || displayName.trim() === ""}>
-              {saving ? "Saving..." : "Save"}
-            </Button>
-            {saved && !changed && <span className="text-[13px] font-bold text-muted">Saved.</span>}
-          </div>
-        </section>
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="display-name">Display name</Label>
+          <Input
+            id="display-name"
+            value={displayName}
+            maxLength={DISPLAY_NAME_MAX_LENGTH}
+            onChange={(e) => {
+              setDisplayName(e.target.value);
+              setSaved(false);
+            }}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="bio">Bio</Label>
+          <Textarea
+            id="bio"
+            value={bio}
+            maxLength={BIO_MAX_LENGTH}
+            rows={4}
+            onChange={(e) => {
+              setBio(e.target.value);
+              setSaved(false);
+            }}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <span className="text-sm font-semibold text-strong">Email</span>
+          <p className="text-sm text-label">{me.email}</p>
+        </div>
+        {error && <p className="error-box">{error}</p>}
+        <div className="flex items-center gap-3">
+          <Button variant="primary" onClick={() => void save()} disabled={saving || !changed || displayName.trim() === ""}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
+          {saved && !changed && <span className="text-sm text-positive">Saved.</span>}
+        </div>
       </div>
       <PictureCropper
         image={cropping}
@@ -189,7 +191,7 @@ function PictureCropper({
     <Dialog open={image !== null} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent>
         <DialogTitle>Picture</DialogTitle>
-        <div className="relative h-72 bg-black">
+        <div className="relative h-72 overflow-hidden rounded-md bg-overlay">
           {image !== null && (
             <Cropper
               image={image}
@@ -204,7 +206,7 @@ function PictureCropper({
             />
           )}
         </div>
-        <div className="flex items-center gap-3 text-muted">
+        <div className="flex items-center gap-3 text-subdued">
           <ZoomOut className="size-4 shrink-0" aria-hidden="true" />
           <Slider value={[zoom]} min={1} max={3} step={0.01} onValueChange={([value]) => setZoom(value ?? 1)} aria-label="Zoom" />
           <ZoomIn className="size-4 shrink-0" aria-hidden="true" />
