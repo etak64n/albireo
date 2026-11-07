@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { useT } from "../i18n.ts";
 import { Button } from "./ui/button.tsx";
 
 /**
@@ -18,15 +19,20 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 
   override render(): ReactNode {
     if (this.state.error === null) return this.props.children;
-    return (
-      <div className="grid min-h-screen place-items-center p-6">
-        <div className="grid w-full max-w-md gap-4">
-          <p className="error-box break-words">{this.state.error.message}</p>
-          <Button variant="primary" className="w-fit" onClick={() => window.location.reload()}>
-            Reload
-          </Button>
-        </div>
-      </div>
-    );
+    return <ErrorScreen message={this.state.error.message} />;
   }
+}
+
+function ErrorScreen({ message }: { message: string }) {
+  const t = useT();
+  return (
+    <div className="grid min-h-screen place-items-center p-6">
+      <div className="grid w-full max-w-md gap-4">
+        <p className="error-box break-words">{message}</p>
+        <Button variant="primary" className="w-fit" onClick={() => window.location.reload()}>
+          {t.common.reload}
+        </Button>
+      </div>
+    </div>
+  );
 }

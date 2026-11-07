@@ -3,6 +3,7 @@ import { RadioGroup } from "radix-ui";
 import { useState } from "react";
 import { RATING_MAX_STARS, type RatingResponse, type VideoRating } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { useT } from "../i18n.ts";
 import { cn } from "../lib/utils.ts";
 import { Button } from "./ui/button.tsx";
 
@@ -26,6 +27,7 @@ export function StarRating({
   const [hovered, setHovered] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const t = useT();
   const lit = hovered ?? rating.mine ?? 0;
 
   async function save(change: () => Promise<RatingResponse>) {
@@ -48,7 +50,7 @@ export function StarRating({
           onValueChange={(value) => void save(() => api.rateVideo(videoId, Number(value)))}
           disabled={saving}
           orientation="horizontal"
-          aria-label="Your rating"
+          aria-label={t.rating.yourRating}
           className="-ml-0.5 flex"
           onPointerLeave={() => setHovered(null)}
         >
@@ -56,7 +58,7 @@ export function StarRating({
             <RadioGroup.Item
               key={stars}
               value={String(stars)}
-              aria-label={stars === 1 ? "1 star" : `${stars} stars`}
+              aria-label={t.rating.stars(stars)}
               onPointerEnter={() => setHovered(stars)}
               className="cursor-pointer rounded-xs p-0.5 disabled:cursor-default pointer-coarse:p-2.5"
             >
@@ -74,7 +76,7 @@ export function StarRating({
         )}
         {rating.mine !== null && (
           <Button variant="ghost" size="sm" className="text-subdued" onClick={() => void save(() => api.clearRating(videoId))} disabled={saving}>
-            Clear
+            {t.rating.clear}
           </Button>
         )}
       </div>

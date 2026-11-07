@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button.tsx";
 import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog.tsx";
 import { Input, Label, Textarea } from "../components/ui/field.tsx";
 import { Slider } from "../components/ui/slider.tsx";
+import { useT } from "../i18n.ts";
 import { cropToJpeg, type CropArea } from "../lib/image.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { useSession } from "../session.tsx";
@@ -28,7 +29,8 @@ export function ChannelSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null);
-  usePageTitle("Channel settings");
+  const t = useT();
+  usePageTitle(t.common.channelSettings);
 
   // The preview is a URL of the image in memory. It is freed when the person picks another picture or leaves.
   useEffect(() => {
@@ -41,7 +43,7 @@ export function ChannelSettingsPage() {
     event.target.value = "";
     if (file === undefined) return;
     if (!file.type.startsWith("image/")) {
-      setError("Choose a picture, such as a JPEG, PNG, or WebP image.");
+      setError(t.channel.notPicture);
       return;
     }
     setError("");
@@ -65,7 +67,7 @@ export function ChannelSettingsPage() {
           headers: { "content-type": signed.contentType },
           body: picture.image,
         }).catch(() => null);
-        if (response === null || !response.ok) throw new Error("The picture could not be uploaded to the storage service.");
+        if (response === null || !response.ok) throw new Error(t.channel.uploadFailed);
         current = (await api.commitAvatar()).me;
       } else if (picture.kind === "remove") {
         current = (await api.removeAvatar()).me;
@@ -88,21 +90,21 @@ export function ChannelSettingsPage() {
 
   return (
     <Shell>
-      <PageHeader title="Channel settings" />
+      <PageHeader title={t.common.channelSettings} />
       <div className="grid w-full max-w-[560px] gap-6">
         <div className="grid gap-1.5">
-          <span className="text-sm font-semibold text-strong">Picture</span>
+          <span className="text-sm font-semibold text-strong">{t.channel.picture}</span>
           <div className="flex flex-wrap items-center gap-4">
             <Avatar url={shown} size="huge" />
             <div className="flex flex-wrap gap-2">
               <input ref={input} type="file" accept="image/*" onChange={choose} className="hidden" />
-              <Button onClick={() => input.current?.click()}>Change picture</Button>
-              {shown !== null && <Button onClick={() => setPicture({ kind: "remove" })}>Remove</Button>}
+              <Button onClick={() => input.current?.click()}>{t.channel.changePicture}</Button>
+              {shown !== null && <Button onClick={() => setPicture({ kind: "remove" })}>{t.common.remove}</Button>}
             </div>
           </div>
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="display-name">Display name</Label>
+          <Label htmlFor="display-name">{t.channel.displayName}</Label>
           <Input
             id="display-name"
             value={displayName}
@@ -114,7 +116,7 @@ export function ChannelSettingsPage() {
           />
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="bio">Bio</Label>
+          <Label htmlFor="bio">{t.channel.bio}</Label>
           <Textarea
             id="bio"
             value={bio}
@@ -129,9 +131,9 @@ export function ChannelSettingsPage() {
         {error && <p className="error-box">{error}</p>}
         <div className="flex items-center gap-3">
           <Button variant="primary" onClick={() => void save()} disabled={saving || !changed || displayName.trim() === ""}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? t.common.saving : t.common.save}
           </Button>
-          {saved && !changed && <span className="text-sm text-positive">Saved.</span>}
+          {saved && !changed && <span className="text-sm text-positive">{t.channel.saved}</span>}
         </div>
       </div>
       <PictureCropper
@@ -166,6 +168,7 @@ function PictureCropper({
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<CropArea | null>(null);
+  const t = useT();
 
   // Each new picture starts centered and not zoomed.
   useEffect(() => {
@@ -186,7 +189,7 @@ function PictureCropper({
   return (
     <Dialog open={image !== null} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent>
-        <DialogTitle>Picture</DialogTitle>
+        <DialogTitle>{t.channel.picture}</DialogTitle>
         <div className="relative h-72 overflow-hidden rounded-md bg-overlay">
           {image !== null && (
             <Cropper
@@ -204,13 +207,13 @@ function PictureCropper({
         </div>
         <div className="flex items-center gap-3 text-subdued">
           <ZoomOut className="size-4 shrink-0" aria-hidden="true" />
-          <Slider value={[zoom]} min={1} max={3} step={0.01} onValueChange={([value]) => setZoom(value ?? 1)} aria-label="Zoom" />
+          <Slider value={[zoom]} min={1} max={3} step={0.01} onValueChange={([value]) => setZoom(value ?? 1)} aria-label={t.channel.zoom} />
           <ZoomIn className="size-4 shrink-0" aria-hidden="true" />
         </div>
         <div className="flex justify-end gap-2">
-          <Button onClick={onCancel}>Cancel</Button>
+          <Button onClick={onCancel}>{t.common.cancel}</Button>
           <Button variant="primary" onClick={() => void apply()} disabled={area === null}>
-            Apply
+            {t.channel.apply}
           </Button>
         </div>
       </DialogContent>

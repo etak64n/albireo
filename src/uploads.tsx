@@ -2,6 +2,7 @@
 // progress stays in view, while you move around the library.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { currentMessages } from "./i18n.ts";
 import { isCancellation, startUpload, type UploadProgress, type UploadTask } from "./lib/upload.ts";
 import { useLibrary } from "./library.tsx";
 
@@ -85,7 +86,7 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
       if (taskRef.current !== null) return;
       const file = event.dataTransfer?.files[0];
       if (file?.type.startsWith("video/")) start(file);
-      else setError("Please drop a video file.");
+      else setError(currentMessages().upload.dropVideo);
     }
 
     window.addEventListener("dragenter", onDragEnter);

@@ -5,6 +5,7 @@ import { PageHeader } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { VideoGrid, VideoGridSkeleton } from "../components/VideoGrid.tsx";
+import { useT } from "../i18n.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { useLocationSearch } from "../router.tsx";
 
@@ -15,7 +16,8 @@ export function SearchPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
-  usePageTitle(query === "" ? "Search" : query);
+  const t = useT();
+  usePageTitle(query === "" ? t.search.title : query);
 
   const load = useCallback(
     async (cursor: string | null) => {
@@ -46,7 +48,7 @@ export function SearchPage() {
 
   return (
     <Shell>
-      {query !== "" && <PageHeader title={`Results for “${query}”`} />}
+      {query !== "" && <PageHeader title={t.search.resultsFor(query)} />}
       {error && <p className="error-box">{error}</p>}
       {videos === null && query !== "" && error === "" && <VideoGridSkeleton />}
       {videos !== null && (
@@ -55,7 +57,7 @@ export function SearchPage() {
           {nextCursor !== null && (
             <div className="pt-4 text-center">
               <Button onClick={() => void loadMore()} disabled={loadingMore}>
-                {loadingMore ? "Loading..." : "Load more"}
+                {loadingMore ? t.common.loadingMore : t.common.loadMore}
               </Button>
             </div>
           )}

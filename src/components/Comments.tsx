@@ -2,6 +2,7 @@ import { Trash2 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { COMMENT_MAX_LENGTH, type VideoComment } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { useT } from "../i18n.ts";
 import { formatDate } from "../lib/format.ts";
 import { splitTimes } from "../lib/timestamps.ts";
 import { Link } from "../router.tsx";
@@ -30,6 +31,7 @@ export function Comments({
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState<VideoComment | null>(null);
+  const t = useT();
 
   const load = useCallback(
     async (cursor: string | null) => {
@@ -55,7 +57,7 @@ export function Comments({
   }
 
   return (
-    <Section title="Comments">
+    <Section title={t.comments.comments}>
       <CommentForm
         videoId={videoId}
         onPosted={(comment) => setComments((current) => [comment, ...(current ?? [])])}
@@ -77,14 +79,14 @@ export function Comments({
       {nextCursor !== null && (
         <div className="pt-2 text-center">
           <Button onClick={() => void loadMore()} disabled={loadingMore}>
-            {loadingMore ? "Loading..." : "Load more"}
+            {loadingMore ? t.common.loadingMore : t.common.loadMore}
           </Button>
         </div>
       )}
       <ConfirmDialog
         open={deleting !== null}
-        title="Delete this comment?"
-        confirmLabel="Delete"
+        title={t.comments.deleteQuestion}
+        confirmLabel={t.common.delete}
         onClose={() => setDeleting(null)}
         onConfirm={async () => {
           if (deleting === null) return;
@@ -101,6 +103,7 @@ export function Comments({
 
 function CommentForm({ videoId, onPosted }: { videoId: string; onPosted: (comment: VideoComment) => void }) {
   const { me } = useSession();
+  const t = useT();
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState("");
@@ -133,13 +136,13 @@ function CommentForm({ videoId, onPosted }: { videoId: string; onPosted: (commen
           onChange={(event) => setText(event.target.value)}
           maxLength={COMMENT_MAX_LENGTH}
           rows={2}
-          placeholder="Add a comment"
-          aria-label="Comment"
+          placeholder={t.comments.placeholder}
+          aria-label={t.comments.comment}
         />
         {error && <p className="text-xs font-semibold text-critical">{error}</p>}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" disabled={posting || text.trim() === ""}>
-            {posting ? "Posting..." : "Comment"}
+            {posting ? t.comments.posting : t.comments.comment}
           </Button>
         </div>
       </div>
@@ -159,6 +162,7 @@ function CommentItem({
   onDelete: () => void;
 }) {
   const author = `/users/${comment.author.id}`;
+  const t = useT();
   return (
     <li className="flex gap-3">
       <Link to={author} className="shrink-0 self-start rounded-full">
@@ -182,7 +186,7 @@ function CommentItem({
                 key={index}
                 type="button"
                 onClick={() => onSeek(part.seconds)}
-                aria-label={`Play from ${part.text}`}
+                aria-label={t.comments.playFrom(part.text)}
                 className="numeric cursor-pointer rounded-xs font-semibold text-accent hover:underline"
               >
                 {part.text}
@@ -192,7 +196,7 @@ function CommentItem({
         </p>
       </div>
       {comment.canDelete && (
-        <Button variant="ghost" size="icon" className="shrink-0 text-subdued" aria-label="Delete the comment" onClick={onDelete}>
+        <Button variant="ghost" size="icon" className="shrink-0 text-subdued" aria-label={t.comments.deleteComment} onClick={onDelete}>
           <Trash2 />
         </Button>
       )}

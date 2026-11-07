@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { currentMessages } from "../../i18n.ts";
 
 /** Reads a text file from its signed URL. The bucket must allow GET from this site in its CORS rules. */
 export function useFileText(url: string): { text: string | null; error: string } {
@@ -9,7 +10,7 @@ export function useFileText(url: string): { text: string | null; error: string }
     const controller = new AbortController();
     fetch(url, { signal: controller.signal })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`The storage service answered HTTP ${response.status}.`);
+        if (!response.ok) throw new Error(currentMessages().files.storageAnswered(response.status));
         setText(await response.text());
       })
       .catch((err: unknown) => {
@@ -17,7 +18,7 @@ export function useFileText(url: string): { text: string | null; error: string }
         // fetch rejects with a TypeError when CORS or the network stops the request.
         setError(
           err instanceof TypeError
-            ? "The file could not be read. Check the network and the bucket's CORS rules."
+            ? currentMessages().files.unreadable
             : err instanceof Error
               ? err.message
               : String(err),

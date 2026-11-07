@@ -1,4 +1,5 @@
 import type { VideoSummary } from "../../shared/api.ts";
+import { useT } from "../i18n.ts";
 import { Skeleton } from "./ui/skeleton.tsx";
 import { VideoCard } from "./VideoCard.tsx";
 
@@ -21,8 +22,9 @@ export function VideoGrid({ videos }: { videos: VideoSummary[] }) {
 
 /** Cards of gray blocks in place of videos that load. */
 export function VideoGridSkeleton({ count = 6 }: { count?: number }) {
+  const t = useT();
   return (
-    <div className={GRID_CLASS} role="status" aria-label="Loading">
+    <div className={GRID_CLASS} role="status" aria-label={t.common.loading}>
       {Array.from({ length: count }, (_, index) => (
         <div key={index} className="grid content-start gap-3">
           <Skeleton className="aspect-video rounded-md" />

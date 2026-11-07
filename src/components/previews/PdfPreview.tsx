@@ -3,6 +3,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import { useT } from "../../i18n.ts";
 import { Spinner } from "../ui/spinner.tsx";
 
 // pdf.js reads the file in a worker that albireo serves with the page.
@@ -19,6 +20,7 @@ export default function PdfPreview({ url }: { url: string }) {
   const [width, setWidth] = useState(0);
   const [pages, setPages] = useState(0);
   const [error, setError] = useState("");
+  const t = useT();
 
   // Pages follow the width of the preview as the window changes size.
   useEffect(() => {
@@ -38,7 +40,7 @@ export default function PdfPreview({ url }: { url: string }) {
         <Document
           file={url}
           onLoadSuccess={({ numPages }) => setPages(numPages)}
-          onLoadError={(err) => setError(`The PDF could not be opened: ${err.message}`)}
+          onLoadError={(err) => setError(t.files.pdfFailed(err.message))}
           loading={<Spinner />}
           error={<></>}
           className="grid gap-4"

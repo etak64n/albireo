@@ -1,8 +1,10 @@
 import "@videojs/react/video/neutral-skin.css";
+import { I18nProvider } from "@videojs/react/i18n";
 import { NeutralVideoSkin, Video, VideoPlayer as Player } from "@videojs/react/video";
 import { useRef, useState, type RefObject } from "react";
 import type { VideoDetail } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { useLanguage } from "../i18n.ts";
 
 // Signed URLs expire. When playback fails, the player asks for a new URL and
 // resumes where it stopped, at most once a minute so a broken URL cannot loop.
@@ -11,7 +13,8 @@ const REFRESH_INTERVAL_MS = 60_000;
 /**
  * The player of Video.js with its neutral skin. The skin brings the controls, the
  * playback speed, picture-in-picture, full screen, and keyboard shortcuts once the
- * player has focus. Video passes the events of the native video element through.
+ * player has focus. Video passes the events of the native video element through. The
+ * controls speak the language of the app, from the translations that Video.js brings.
  */
 export function VideoPlayer({
   video,
@@ -30,6 +33,7 @@ export function VideoPlayer({
   const resumeAt = useRef<number | null>(null);
   const lastRefresh = useRef(0);
   const recorded = useRef(false);
+  const language = useLanguage();
 
   // The first playback on the page puts the video at the front of the history.
   function handlePlay() {
@@ -60,20 +64,22 @@ export function VideoPlayer({
   }
 
   return (
-    <Player poster={video.thumbnailUrl}>
-      <NeutralVideoSkin className="albireo-player">
-        <Video
-          ref={videoRef}
-          src={src}
-          playsInline
-          autoPlay={autoPlay}
-          preload="metadata"
-          onError={() => void handleError()}
-          onLoadedMetadata={handleLoadedMetadata}
-          onPlay={handlePlay}
-          onEnded={onEnded}
-        />
-      </NeutralVideoSkin>
-    </Player>
+    <I18nProvider locale={language}>
+      <Player poster={video.thumbnailUrl}>
+        <NeutralVideoSkin className="albireo-player">
+          <Video
+            ref={videoRef}
+            src={src}
+            playsInline
+            autoPlay={autoPlay}
+            preload="metadata"
+            onError={() => void handleError()}
+            onLoadedMetadata={handleLoadedMetadata}
+            onPlay={handlePlay}
+            onEnded={onEnded}
+          />
+        </NeutralVideoSkin>
+      </Player>
+    </I18nProvider>
   );
 }

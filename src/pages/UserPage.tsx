@@ -7,6 +7,7 @@ import { SeriesGrid } from "../components/SeriesGrid.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
 import { VideoGrid, VideoGridSkeleton } from "../components/VideoGrid.tsx";
+import { useT } from "../i18n.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { Link } from "../router.tsx";
 import { useSession } from "../session.tsx";
@@ -17,6 +18,7 @@ import { Button } from "../components/ui/button.tsx";
 /** The channel of one person: their picture, name, and bio, and the series and videos that they made. */
 export function UserPage({ id }: { id: string }) {
   const { me } = useSession();
+  const t = useT();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [series, setSeries] = useState<SeriesSummary[]>([]);
   const [videos, setVideos] = useState<VideoSummary[]>([]);
@@ -68,7 +70,7 @@ export function UserPage({ id }: { id: string }) {
         <p className="error-box">{error instanceof Error ? error.message : String(error)}</p>
       ) : user === null || profile === null ? (
         <>
-          <div className="flex items-center gap-4" role="status" aria-label="Loading">
+          <div className="flex items-center gap-4" role="status" aria-label={t.common.loading}>
             <Skeleton className="size-14 rounded-full" />
             <Skeleton className="h-9 w-1/3" />
           </div>
@@ -82,24 +84,24 @@ export function UserPage({ id }: { id: string }) {
               <h1 className="min-w-0 flex-1 truncate text-display font-bold text-strong">{profile.displayName}</h1>
               {isMe && (
                 <Button asChild>
-                  <Link to="/settings/channel">Channel settings</Link>
+                  <Link to="/settings/channel">{t.common.channelSettings}</Link>
                 </Button>
               )}
             </div>
             {profile.bio && <p className="max-w-[75ch] text-sm leading-relaxed break-words whitespace-pre-wrap">{profile.bio}</p>}
           </header>
           {series.length > 0 && (
-            <Section title="Series">
+            <Section title={t.common.series}>
               <SeriesGrid series={series} />
             </Section>
           )}
           {videos.length > 0 && (
-            <Section title="Videos">
+            <Section title={t.common.videos}>
               <VideoGrid videos={videos} />
               {nextCursor !== null && (
                 <div className="pt-4 text-center">
                   <Button onClick={() => void loadMore()} disabled={loadingMore}>
-                    {loadingMore ? "Loading..." : "Load more"}
+                    {loadingMore ? t.common.loadingMore : t.common.loadMore}
                   </Button>
                 </div>
               )}

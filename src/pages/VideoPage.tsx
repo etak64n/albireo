@@ -11,6 +11,7 @@ import { StarRating } from "../components/StarRating.tsx";
 import { VideoEditForm } from "../components/VideoEditForm.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
+import { useT } from "../i18n.ts";
 import { formatDate, formatDuration } from "../lib/format.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { Link, navigate } from "../router.tsx";
@@ -39,6 +40,7 @@ export function VideoPage({ id }: { id: string }) {
   // The page plays at once when the previous episode of the series just ended.
   const [autoPlay] = useState(() => isContinueState(window.history.state));
   const player = useRef<HTMLVideoElement>(null);
+  const t = useT();
   usePageTitle(video?.title ?? null);
 
   useEffect(() => {
@@ -86,7 +88,7 @@ export function VideoPage({ id }: { id: string }) {
               {video.series !== null ? (
                 <Breadcrumb to={`/series/${video.series.id}`}>{video.series.title}</Breadcrumb>
               ) : (
-                <Breadcrumb to="/videos">All videos</Breadcrumb>
+                <Breadcrumb to="/videos">{t.common.allVideos}</Breadcrumb>
               )}
               {/* On phones the player spans the screen from edge to edge. */}
               <div className="-mx-4 sm:mx-0">
@@ -112,8 +114,9 @@ export function VideoPage({ id }: { id: string }) {
 }
 
 function VideoSkeleton() {
+  const t = useT();
   return (
-    <div className="grid gap-10 @4xl:grid-cols-[minmax(0,1fr)_280px]" role="status" aria-label="Loading">
+    <div className="grid gap-10 @4xl:grid-cols-[minmax(0,1fr)_280px]" role="status" aria-label={t.common.loading}>
       <div className="grid content-start gap-6">
         <Skeleton className="h-5 w-24" />
         <PlayerPlaceholder />
@@ -139,9 +142,10 @@ function PlayerPlaceholder() {
  * narrow pages.
  */
 function VideoAside({ video, onChange, layout }: { video: VideoDetail; onChange: (video: VideoDetail) => void; layout: "column" | "row" }) {
+  const t = useT();
   const details = [
     {
-      label: "Uploaded by",
+      label: t.common.uploadedBy,
       value:
         video.uploader === null ? (
           "—"
@@ -152,16 +156,16 @@ function VideoAside({ video, onChange, layout }: { video: VideoDetail; onChange:
           </Link>
         ),
     },
-    { label: "Date", value: <span className="numeric">{formatDate(video.createdAt)}</span> },
-    ...(video.durationSec === null ? [] : [{ label: "Length", value: <span className="numeric">{formatDuration(video.durationSec)}</span> }]),
+    { label: t.common.date, value: <span className="numeric">{formatDate(video.createdAt)}</span> },
+    ...(video.durationSec === null ? [] : [{ label: t.common.length, value: <span className="numeric">{formatDuration(video.durationSec)}</span> }]),
     ...(video.width === null || video.height === null
       ? []
-      : [{ label: "Resolution", value: <span className="numeric">{`${video.width}×${video.height}`}</span> }]),
-    { label: "Rating", value: <StarRating videoId={video.id} rating={video.rating} onRated={(rating) => onChange({ ...video, rating })} /> },
+      : [{ label: t.video.resolution, value: <span className="numeric">{`${video.width}×${video.height}`}</span> }]),
+    { label: t.video.rating, value: <StarRating videoId={video.id} rating={video.rating} onRated={(rating) => onChange({ ...video, rating })} /> },
   ];
   return (
     <div className={layout === "column" ? "grid content-start gap-10" : "grid content-start gap-8"}>
-      <Section title="Details">
+      <Section title={t.video.details}>
         <DetailList items={details} layout={layout} />
       </Section>
       {video.series !== null && <SeriesNav series={video.series} />}
@@ -171,14 +175,15 @@ function VideoAside({ video, onChange, layout }: { video: VideoDetail; onChange:
 
 /** The series of the video: its name, the number of the episode, and the previous and the next episodes. */
 function SeriesNav({ series }: { series: VideoSeries }) {
+  const t = useT();
   return (
-    <Section title="Series">
-      <nav className="grid gap-3" aria-label="Series">
+    <Section title={t.common.series}>
+      <nav className="grid gap-3" aria-label={t.common.series}>
         <div className="grid gap-1">
           <Link to={`/series/${series.id}`} className="w-fit text-sm font-bold break-words text-accent hover:underline">
             {series.title}
           </Link>
-          <span className="text-sm text-label">Episode {series.episode}</span>
+          <span className="text-sm text-label">{t.video.episode(series.episode)}</span>
         </div>
         <div className="flex flex-wrap gap-2">
           <EpisodeButton episode={series.previous} direction="previous" />
@@ -190,7 +195,8 @@ function SeriesNav({ series }: { series: VideoSeries }) {
 }
 
 function EpisodeButton({ episode, direction }: { episode: EpisodeLink | null; direction: "previous" | "next" }) {
-  const label = direction === "previous" ? "Previous" : "Next";
+  const t = useT();
+  const label = direction === "previous" ? t.video.previous : t.video.next;
   const content =
     direction === "previous" ? (
       <>
@@ -207,7 +213,7 @@ function EpisodeButton({ episode, direction }: { episode: EpisodeLink | null; di
   return (
     <Button asChild>
       <Link to={`/videos/${episode.id}`}>
-        <span className="sr-only">{`${label}: ${episode.title}`}</span>
+        <span className="sr-only">{direction === "previous" ? t.video.previousEpisode(episode.title) : t.video.nextEpisode(episode.title)}</span>
         <span aria-hidden="true" className="flex items-center gap-1">
           {content}
         </span>

@@ -2,6 +2,7 @@ import { Eye, File, FileImage, FileText, Paperclip, Presentation, Trash2 } from 
 import { useRef, useState, type ChangeEvent } from "react";
 import { ATTACHMENT_MAX_BYTES, type VideoAttachment, type VideoDetail } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { useT } from "../i18n.ts";
 import { previewKindOf, type PreviewKind } from "../lib/attachments.ts";
 import { formatBytes } from "../lib/format.ts";
 import { put } from "../lib/upload.ts";
@@ -21,13 +22,14 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
   const [previewing, setPreviewing] = useState<VideoAttachment | null>(null);
   const [removing, setRemoving] = useState<VideoAttachment | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const t = useT();
 
   if (video.attachments.length === 0 && !video.canEdit) return null;
 
   async function attach(file: globalThis.File) {
     setError("");
     if (file.size > ATTACHMENT_MAX_BYTES) {
-      setError(`Attachments can be at most ${formatBytes(ATTACHMENT_MAX_BYTES)}.`);
+      setError(t.attachments.tooLarge(formatBytes(ATTACHMENT_MAX_BYTES)));
       return;
     }
     setUploading({ fileName: file.name, percent: 0 });
@@ -53,14 +55,14 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
 
   return (
     <Section
-      title="Attachments"
+      title={t.attachments.attachments}
       actions={
         video.canEdit ? (
           <>
             <input ref={input} type="file" onChange={choose} className="hidden" />
             <Button onClick={() => input.current?.click()} disabled={uploading !== null}>
               <Paperclip aria-hidden="true" />
-              Attach
+              {t.attachments.attach}
             </Button>
           </>
         ) : undefined
@@ -68,7 +70,7 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
     >
       {uploading !== null && (
         <p role="status" className="numeric truncate text-xs text-subdued">
-          Uploading {uploading.fileName} {uploading.percent}%
+          {t.attachments.uploading(uploading.fileName, uploading.percent)}
         </p>
       )}
       {error && <p className="error-box">{error}</p>}
@@ -86,7 +88,7 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
                 {kind !== null && (
                   <Button onClick={() => setPreviewing(attachment)}>
                     <Eye aria-hidden="true" />
-                    <span className="max-sm:sr-only">Preview</span>
+                    <span className="max-sm:sr-only">{t.attachments.preview}</span>
                   </Button>
                 )}
                 <DownloadButton attachment={attachment} compact />
@@ -95,7 +97,7 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
                     variant="ghost"
                     size="icon"
                     className="text-subdued"
-                    aria-label={`Remove ${attachment.fileName}`}
+                    aria-label={t.attachments.removeFile(attachment.fileName)}
                     onClick={() => setRemoving(attachment)}
                   >
                     <Trash2 />
@@ -109,8 +111,8 @@ export function Attachments({ video, onChange }: { video: VideoDetail; onChange:
       <AttachmentPreview attachment={previewing} onClose={() => setPreviewing(null)} />
       <ConfirmDialog
         open={removing !== null}
-        title="Remove this attachment?"
-        confirmLabel="Remove"
+        title={t.attachments.removeQuestion}
+        confirmLabel={t.common.remove}
         onClose={() => setRemoving(null)}
         onConfirm={async () => {
           if (removing === null) return;

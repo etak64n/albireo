@@ -6,6 +6,7 @@ import { SeriesGrid } from "../components/SeriesGrid.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { VideoGrid, VideoGridSkeleton } from "../components/VideoGrid.tsx";
+import { useT } from "../i18n.ts";
 import { useLibrary } from "../library.tsx";
 import { usePageTitle } from "../lib/title.ts";
 import { useUploads } from "../uploads.tsx";
@@ -18,7 +19,8 @@ export function AllVideosPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const { completed } = useUploads();
-  usePageTitle("All videos");
+  const t = useT();
+  usePageTitle(t.common.allVideos);
 
   const load = useCallback(async (cursor: string | null) => {
     try {
@@ -43,21 +45,21 @@ export function AllVideosPage() {
 
   return (
     <Shell>
-      <PageHeader title="All videos" />
+      <PageHeader title={t.common.allVideos} />
       {error && <p className="error-box">{error}</p>}
       {series !== null && series.length > 0 && (
-        <Section title="Series">
+        <Section title={t.common.series}>
           <SeriesGrid series={series} />
         </Section>
       )}
       {videos === null && error === "" && <VideoGridSkeleton />}
       {videos !== null && (
-        <Section title="Videos">
+        <Section title={t.common.videos}>
           <VideoGrid videos={videos} />
           {nextCursor !== null && (
             <div className="pt-4 text-center">
               <Button onClick={() => void loadMore()} disabled={loadingMore}>
-                {loadingMore ? "Loading..." : "Load more"}
+                {loadingMore ? t.common.loadingMore : t.common.loadMore}
               </Button>
             </div>
           )}

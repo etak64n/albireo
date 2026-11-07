@@ -6,6 +6,7 @@
 
 import type { CreateUploadResponse, VideoDetail } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { currentMessages } from "../i18n.ts";
 import { titleFromFileName } from "./format.ts";
 import { inspectVideo } from "./media.ts";
 
@@ -38,7 +39,7 @@ async function upload(
   signal: AbortSignal,
 ): Promise<VideoDetail> {
   if (!file.type.startsWith("video/")) {
-    throw new Error("Choose a video file. The browser does not recognize this file as a video.");
+    throw new Error(currentMessages().upload.notVideo);
   }
   onProgress({ phase: "reading", uploadedBytes: 0, totalBytes: file.size });
   const metadata = await inspectVideo(file);
@@ -138,11 +139,9 @@ async function sendPart(
       // A fresh URL on every attempt, so a retry never uses an expired signature.
       const { parts } = await api.partUrls(videoId, [partNumber]);
       const url = parts[0]?.url;
-      if (url === undefined) throw new Error(`The API returned no URL for part ${partNumber}.`);
+      if (url === undefined) throw new Error(currentMessages().upload.noPartUrl(partNumber));
       const etag = await put(url, blob, null, signal, onBytes);
-      if (etag === null) {
-        throw new Error("The storage service hides the ETag header. Add ETag to ExposeHeaders in the bucket's CORS rules.");
-      }
+      if (etag === null) throw new Error(currentMessages().upload.etagHidden);
       return etag;
     } catch (error) {
       if (signal.aborted || attempt >= PART_ATTEMPTS) throw error;
@@ -175,9 +174,9 @@ export function put(
     xhr.upload.onprogress = (event) => onBytes(event.loaded);
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.getResponseHeader("ETag"));
-      else reject(new Error(`The storage service rejected the upload with HTTP ${xhr.status}.`));
+      else reject(new Error(currentMessages().upload.rejected(xhr.status)));
     };
-    xhr.onerror = () => reject(new Error("The upload failed. Check the network and the bucket's CORS rules."));
+    xhr.onerror = () => reject(new Error(currentMessages().upload.failed));
     xhr.onabort = () => reject(new DOMException("The upload was canceled.", "AbortError"));
     xhr.onloadend = () => signal.removeEventListener("abort", onAbort);
     if (signal.aborted) {

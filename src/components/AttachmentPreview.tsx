@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { VideoAttachment } from "../../shared/api.ts";
+import { useT } from "../i18n.ts";
 import { previewKindOf } from "../lib/attachments.ts";
 import { DownloadButton } from "./DownloadButton.tsx";
 import { Button } from "./ui/button.tsx";
@@ -17,6 +18,7 @@ const TextPreview = lazy(() => import("./previews/TextPreview.tsx"));
 /** An attachment over the page, almost as large as the window, with its download button. */
 export function AttachmentPreview({ attachment, onClose }: { attachment: VideoAttachment | null; onClose: () => void }) {
   const kind = attachment === null ? null : previewKindOf(attachment.fileName);
+  const t = useT();
   return (
     <Dialog open={attachment !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-6xl flex-col gap-0 overflow-hidden p-0">
@@ -26,7 +28,7 @@ export function AttachmentPreview({ attachment, onClose }: { attachment: VideoAt
               <DialogTitle className="min-w-0 flex-1 truncate text-base font-semibold">{attachment.fileName}</DialogTitle>
               <DownloadButton attachment={attachment} />
               <DialogClose asChild>
-                <Button variant="ghost" size="icon" aria-label="Close the preview">
+                <Button variant="ghost" size="icon" aria-label={t.attachments.closePreview}>
                   <X />
                 </Button>
               </DialogClose>

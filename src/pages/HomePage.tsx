@@ -8,6 +8,7 @@ import { Thumbnail } from "../components/Thumbnail.tsx";
 import { buttonVariants } from "../components/ui/button.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
 import { VideoGrid, VideoGridSkeleton } from "../components/VideoGrid.tsx";
+import { useT } from "../i18n.ts";
 import { formatDate } from "../lib/format.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { Link } from "../router.tsx";
@@ -18,6 +19,7 @@ export function HomePage() {
   const [videos, setVideos] = useState<VideoSummary[] | null>(null);
   const [error, setError] = useState("");
   const { completed } = useUploads();
+  const t = useT();
   usePageTitle(null);
 
   const load = useCallback(async () => {
@@ -37,7 +39,7 @@ export function HomePage() {
 
   return (
     <Shell>
-      <h1 className="sr-only">Home</h1>
+      <h1 className="sr-only">{t.shell.home}</h1>
       {error && <p className="error-box">{error}</p>}
       {videos === null && error === "" && (
         <>
@@ -50,7 +52,7 @@ export function HomePage() {
           <>
             <Feature video={first} />
             {rest.length > 0 && (
-              <Section title="Recommended">
+              <Section title={t.home.recommended}>
                 <VideoGrid videos={rest} />
               </Section>
             )}
@@ -78,6 +80,7 @@ const FEATURE_CLASS = "-m-3 grid gap-x-8 gap-y-4 rounded-lg p-3 @3xl:grid-cols-[
 
 /** The video recommended first, large: its picture, and beside it the title and the way to play it. */
 function Feature({ video }: { video: VideoSummary }) {
+  const t = useT();
   const byline = [video.uploader?.displayName, formatDate(video.createdAt)].filter((part) => part !== undefined && part !== "").join(" · ");
   return (
     <Link to={`/videos/${video.id}`} className={`${FEATURE_CLASS} transition-colors duration-150 hover:bg-surface-hover`}>
@@ -87,7 +90,7 @@ function Feature({ video }: { video: VideoSummary }) {
         <p className="numeric text-base text-label">{byline}</p>
         <span className={buttonVariants({ variant: "primary", size: "lg", className: "mt-3" })}>
           <Play className="fill-current" aria-hidden="true" />
-          Play
+          {t.home.play}
         </span>
       </div>
     </Link>

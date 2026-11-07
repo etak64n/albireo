@@ -1,12 +1,14 @@
-// The signed-in person, loaded once when the app starts and shared by every page.
+// The signed-in person, loaded once when the app starts and shared by every page. The app
+// speaks the language that the person chose.
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Me } from "../shared/api.ts";
 import { api } from "./api.ts";
+import { setLanguage } from "./i18n.ts";
 
 interface Session {
   me: Me;
-  /** Replaces the signed-in person after a change, such as a new display name. */
+  /** Replaces the signed-in person after a change, such as a new display name or language. */
   setMe: (me: Me) => void;
 }
 
@@ -19,11 +21,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     api
       .getMe()
-      .then(({ me: loaded }) => setMe(loaded))
+      .then(({ me: loaded }) => {
+        setLanguage(loaded.language);
+        setMe(loaded);
+      })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
 
-  const update = useCallback((next: Me) => setMe(next), []);
+  const update = useCallback((next: Me) => {
+    setLanguage(next.language);
+    setMe(next);
+  }, []);
 
   if (error !== "") {
     return (

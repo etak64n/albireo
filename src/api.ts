@@ -33,6 +33,7 @@ import type {
   UserResponse,
   VideoResponse,
 } from "../shared/api.ts";
+import { currentMessages } from "./i18n.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -57,14 +58,14 @@ async function request<T>(path: string, method: string, body?: unknown): Promise
   } catch {
     // Cloudflare Access redirects to its sign-in page when the session expires,
     // and fetch cannot follow that redirect to another origin.
-    throw new ApiError(0, "network_error", "albireo could not be reached. If your sign-in expired, reload the page.");
+    throw new ApiError(0, "network_error", currentMessages().api.unreachable);
   }
   if (response.status === 204) return undefined as T;
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const error = isErrorBody(data)
       ? data.error
-      : { code: "http_error", message: `The request failed with HTTP ${response.status}.` };
+      : { code: "http_error", message: currentMessages().api.failed(response.status) };
     throw new ApiError(response.status, error.code, error.message);
   }
   return data as T;

@@ -4,6 +4,7 @@ import { api } from "../api.ts";
 import { PageHeader } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { VideoGrid, VideoGridSkeleton } from "../components/VideoGrid.tsx";
+import { useT } from "../i18n.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { Button } from "../components/ui/button.tsx";
 
@@ -13,7 +14,8 @@ export function HistoryPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
-  usePageTitle("History");
+  const t = useT();
+  usePageTitle(t.shell.history);
 
   const load = useCallback(async (cursor: string | null) => {
     try {
@@ -37,7 +39,7 @@ export function HistoryPage() {
 
   return (
     <Shell>
-      <PageHeader title="History" />
+      <PageHeader title={t.shell.history} />
       {error && <p className="error-box">{error}</p>}
       {videos === null && error === "" && <VideoGridSkeleton />}
       {videos !== null && (
@@ -46,7 +48,7 @@ export function HistoryPage() {
           {nextCursor !== null && (
             <div className="pt-4 text-center">
               <Button onClick={() => void loadMore()} disabled={loadingMore}>
-                {loadingMore ? "Loading..." : "Load more"}
+                {loadingMore ? t.common.loadingMore : t.common.loadMore}
               </Button>
             </div>
           )}

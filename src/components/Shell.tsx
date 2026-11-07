@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import appearance from "virtual:albireo-appearance";
 import { SEARCH_QUERY_MAX_LENGTH, TITLE_MAX_LENGTH } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { useT } from "../i18n.ts";
 import { useLibrary } from "../library.tsx";
 import { cn } from "../lib/utils.ts";
 import { Link, navigate, useLocationSearch, usePathname } from "../router.tsx";
@@ -23,6 +24,7 @@ import { DropOverlay, UploadButton, UploadPanel } from "./VideoUpload.tsx";
  */
 export function Shell({ children, seriesId = null }: { children: ReactNode; seriesId?: string | null }) {
   const { setTargetSeries } = useUploads();
+  const t = useT();
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -46,20 +48,20 @@ export function Shell({ children, seriesId = null }: { children: ReactNode; seri
         }}
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-sm focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-popover"
       >
-        Skip to content
+        {t.shell.skipToContent}
       </a>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-sidebar border-r border-hairline bg-surface lg:block">
         <Sidebar />
       </aside>
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-        <SheetContent title="Menu">
+        <SheetContent title={t.shell.menu}>
           <Sidebar closable />
         </SheetContent>
       </Sheet>
       <div className="lg:pl-sidebar">
         <header className="sticky top-0 z-20 border-b border-hairline bg-surface px-4 sm:px-6 lg:px-gutter">
           <div className="mx-auto flex h-topbar max-w-content items-center gap-2">
-            <Button variant="ghost" size="icon" className="-ml-1 lg:hidden" aria-label="Open the menu" onClick={() => setMenuOpen(true)}>
+            <Button variant="ghost" size="icon" className="-ml-1 lg:hidden" aria-label={t.shell.openMenu} onClick={() => setMenuOpen(true)}>
               <MenuIcon />
             </Button>
             <Link to="/" className="mr-1 shrink-0 rounded-xs lg:hidden">
@@ -96,6 +98,7 @@ function Brand() {
 
 /** The search box on the left of the bar. On the results page it shows the query. */
 function SearchBox() {
+  const t = useT();
   const pathname = usePathname();
   const search = useLocationSearch();
   const current = pathname === "/search" ? (new URLSearchParams(search).get("q") ?? "") : "";
@@ -119,8 +122,8 @@ function SearchBox() {
         enterKeyHint="search"
         onChange={(event) => setQuery(event.target.value)}
         maxLength={SEARCH_QUERY_MAX_LENGTH}
-        placeholder="Search"
-        aria-label="Search videos"
+        placeholder={t.shell.search}
+        aria-label={t.shell.searchVideos}
         className="h-9 w-full rounded-md bg-surface-subdued pr-3 pl-9 text-sm text-ink placeholder:text-placeholder pointer-coarse:min-h-11 pointer-coarse:text-base"
       />
     </form>
@@ -130,13 +133,14 @@ function SearchBox() {
 /** The menu of the signed-in person under their picture: their channel, its settings, their account, and signing out. */
 function AccountMenu() {
   const { me } = useSession();
+  const t = useT();
   const logoutUrl = me.logoutUrl;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={`Account of ${me.displayName}`}
+          aria-label={t.shell.accountOf(me.displayName)}
           className="grid cursor-pointer place-items-center rounded-full pointer-coarse:size-11"
         >
           <Avatar url={me.avatarUrl} size="control" />
@@ -153,20 +157,20 @@ function AccountMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => navigate(`/users/${me.id}`)}>
           <UserRound />
-          Your channel
+          {t.shell.yourChannel}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate("/settings/channel")}>
           <Settings />
-          Channel settings
+          {t.common.channelSettings}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate("/settings/account")}>
           <KeyRound />
-          Account
+          {t.common.account}
         </DropdownMenuItem>
         {logoutUrl !== null && (
           <DropdownMenuItem onSelect={() => void logOut(logoutUrl)}>
             <LogOut />
-            Log out
+            {t.shell.logOut}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
@@ -180,6 +184,7 @@ function AccountMenu() {
  */
 function Sidebar({ closable = false }: { closable?: boolean }) {
   const { series, error } = useLibrary();
+  const t = useT();
   const pathname = usePathname();
   const [creating, setCreating] = useState(false);
 
@@ -189,28 +194,28 @@ function Sidebar({ closable = false }: { closable?: boolean }) {
         <Brand />
         {closable && (
           <SheetClose asChild>
-            <Button variant="ghost" size="icon" className="-mr-1" aria-label="Close the menu">
+            <Button variant="ghost" size="icon" className="-mr-1" aria-label={t.shell.closeMenu}>
               <X />
             </Button>
           </SheetClose>
         )}
       </div>
-      <nav className="-mx-1 grid gap-0.5" aria-label="Library">
+      <nav className="-mx-1 grid gap-0.5" aria-label={t.shell.library}>
         <NavLink to="/" current={pathname === "/"} icon={<House />}>
-          Home
+          {t.shell.home}
         </NavLink>
         <NavLink to="/videos" current={pathname === "/videos"} icon={<LayoutGrid />}>
-          All videos
+          {t.common.allVideos}
         </NavLink>
         <NavLink to="/history" current={pathname === "/history"} icon={<History />}>
-          History
+          {t.shell.history}
         </NavLink>
       </nav>
       <div className="grid gap-1">
         <div className="flex h-7 items-center justify-between">
-          <h2 className="text-xs text-subdued">Series</h2>
+          <h2 className="text-xs text-subdued">{t.common.series}</h2>
           {!creating && (
-            <Button variant="ghost" size="icon" className="-mr-1.5 text-subdued" aria-label="New series" onClick={() => setCreating(true)}>
+            <Button variant="ghost" size="icon" className="-mr-1.5 text-subdued" aria-label={t.shell.newSeries} onClick={() => setCreating(true)}>
               <Plus />
             </Button>
           )}
@@ -218,7 +223,7 @@ function Sidebar({ closable = false }: { closable?: boolean }) {
         {creating && <NewSeriesForm onDone={() => setCreating(false)} />}
         {error !== "" && <p className="text-xs font-semibold text-critical">{error}</p>}
         {series !== null && series.length > 0 && (
-          <nav className="-mx-1 grid gap-0.5" aria-label="Series">
+          <nav className="-mx-1 grid gap-0.5" aria-label={t.common.series}>
             {series.map((item) => (
               <NavLink key={item.id} to={`/series/${item.id}`} current={pathname === `/series/${item.id}`} icon={<Layers />}>
                 {item.title}
@@ -251,6 +256,7 @@ function NavLink({ to, current, icon, children }: { to: string; current: boolean
 /** Creates a series from its title and opens its page. The page edits the description. */
 function NewSeriesForm({ onDone }: { onDone: () => void }) {
   const { refresh } = useLibrary();
+  const t = useT();
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -277,13 +283,13 @@ function NewSeriesForm({ onDone }: { onDone: () => void }) {
         if (title.trim() !== "") void create();
       }}
     >
-      <Input value={title} maxLength={TITLE_MAX_LENGTH} onChange={(e) => setTitle(e.target.value)} aria-label="Series title" placeholder="Series title" autoFocus />
+      <Input value={title} maxLength={TITLE_MAX_LENGTH} onChange={(e) => setTitle(e.target.value)} aria-label={t.shell.seriesTitle} placeholder={t.shell.seriesTitle} autoFocus />
       {error && <p className="text-xs font-semibold text-critical">{error}</p>}
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={saving || title.trim() === ""}>
-          {saving ? "Creating..." : "Create"}
+          {saving ? t.shell.creating : t.shell.create}
         </Button>
-        <Button onClick={onDone}>Cancel</Button>
+        <Button onClick={onDone}>{t.common.cancel}</Button>
       </div>
     </form>
   );

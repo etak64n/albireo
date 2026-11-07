@@ -1,6 +1,7 @@
 import { Download, LoaderCircle } from "lucide-react";
 import { useState, type MouseEvent } from "react";
 import type { VideoAttachment } from "../../shared/api.ts";
+import { useT } from "../i18n.ts";
 import { downloadFile } from "../lib/download.ts";
 import { Button } from "./ui/button.tsx";
 
@@ -11,6 +12,7 @@ import { Button } from "./ui/button.tsx";
  */
 export function DownloadButton({ attachment, compact = false }: { attachment: VideoAttachment; compact?: boolean }) {
   const [busy, setBusy] = useState(false);
+  const t = useT();
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     // Let the browser handle new tabs and its own menu as usual.
@@ -27,7 +29,7 @@ export function DownloadButton({ attachment, compact = false }: { attachment: Vi
     <Button asChild>
       <a href={attachment.downloadUrl} download={attachment.fileName} onClick={handleClick} aria-busy={busy}>
         {busy ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
-        <span className={compact ? "max-sm:sr-only" : undefined}>Download</span>
+        <span className={compact ? "max-sm:sr-only" : undefined}>{t.attachments.download}</span>
       </a>
     </Button>
   );

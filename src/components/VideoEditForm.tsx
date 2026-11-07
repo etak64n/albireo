@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { DESCRIPTION_MAX_LENGTH, TITLE_MAX_LENGTH, type SeriesSummary, type UpdateVideoRequest, type VideoDetail } from "../../shared/api.ts";
 import { api } from "../api.ts";
+import { useT } from "../i18n.ts";
 import { Button } from "./ui/button.tsx";
 import { Input, Label, Textarea } from "./ui/field.tsx";
 
@@ -10,6 +11,7 @@ import { Input, Label, Textarea } from "./ui/field.tsx";
  */
 export function VideoEditForm({ video, onSaved }: { video: VideoDetail; onSaved: (video: VideoDetail) => void }) {
   const [editing, setEditing] = useState(false);
+  const t = useT();
 
   if (!editing) {
     return (
@@ -18,7 +20,7 @@ export function VideoEditForm({ video, onSaved }: { video: VideoDetail; onSaved:
           <h1 className="min-w-0 text-display font-bold break-words text-strong">{video.title}</h1>
           {video.canEdit && (
             <Button className="mt-1" onClick={() => setEditing(true)}>
-              Edit
+              {t.common.edit}
             </Button>
           )}
         </div>
@@ -54,6 +56,7 @@ function EditForm({
   const [seriesList, setSeriesList] = useState<SeriesSummary[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const t = useT();
 
   // The list of series loads when the form opens, so the video page itself needs one request.
   useEffect(() => {
@@ -94,17 +97,17 @@ function EditForm({
       }}
     >
       <div className="grid gap-1.5">
-        <Label htmlFor="video-title">Title</Label>
+        <Label htmlFor="video-title">{t.common.title}</Label>
         <Input id="video-title" value={title} maxLength={TITLE_MAX_LENGTH} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="video-description">Description</Label>
+        <Label htmlFor="video-description">{t.common.description}</Label>
         <Textarea id="video-description" value={description} maxLength={DESCRIPTION_MAX_LENGTH} onChange={(e) => setDescription(e.target.value)} rows={5} />
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="video-series">Series</Label>
+        <Label htmlFor="video-series">{t.common.series}</Label>
         <select id="video-series" value={seriesId} onChange={(e) => setSeriesId(e.target.value)} disabled={seriesList === null} className="field">
-          <option value="">No series</option>
+          <option value="">{t.video.noSeries}</option>
           {seriesList?.map((series) => (
             <option key={series.id} value={series.id}>
               {series.title}
@@ -115,9 +118,9 @@ function EditForm({
       {error && <p className="error-box">{error}</p>}
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={saving || title.trim() === "" || seriesList === null}>
-          {saving ? "Saving..." : "Save"}
+          {saving ? t.common.saving : t.common.save}
         </Button>
-        <Button onClick={onCancel}>Cancel</Button>
+        <Button onClick={onCancel}>{t.common.cancel}</Button>
       </div>
     </form>
   );

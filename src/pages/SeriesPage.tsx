@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button.tsx";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu.tsx";
 import { Input, Label, Textarea } from "../components/ui/field.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
+import { useT } from "../i18n.ts";
 import { formatDate, formatDuration } from "../lib/format.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { useLibrary } from "../library.tsx";
@@ -26,6 +27,7 @@ export function SeriesPage({ id }: { id: string }) {
   const [actionError, setActionError] = useState("");
   const [editing, setEditing] = useState(false);
   const { completed } = useUploads();
+  const t = useT();
   usePageTitle(series?.title ?? null);
 
   const load = useCallback(async () => {
@@ -65,7 +67,7 @@ export function SeriesPage({ id }: { id: string }) {
       ) : (
         <>
           <div className="grid gap-6">
-            <Breadcrumb to="/videos">All videos</Breadcrumb>
+            <Breadcrumb to="/videos">{t.common.allVideos}</Breadcrumb>
             {editing ? (
               <SeriesEditForm
                 series={series}
@@ -85,7 +87,7 @@ export function SeriesPage({ id }: { id: string }) {
                       <h1 className="min-w-0 text-display font-bold break-words text-strong">{series.title}</h1>
                       {series.canEdit && (
                         <Button className="mt-1" onClick={() => setEditing(true)}>
-                          Edit
+                          {t.common.edit}
                         </Button>
                       )}
                     </div>
@@ -112,8 +114,9 @@ export function SeriesPage({ id }: { id: string }) {
 }
 
 function SeriesSkeleton() {
+  const t = useT();
   return (
-    <div className="grid gap-12" role="status" aria-label="Loading">
+    <div className="grid gap-12" role="status" aria-label={t.common.loading}>
       <div className="grid gap-6">
         <Skeleton className="h-5 w-20" />
         <div className="flex items-start gap-4">
@@ -151,6 +154,7 @@ function EpisodeTable({
   onRemove: (episode: Episode) => void;
 }) {
   const { me } = useSession();
+  const t = useT();
   if (series.episodes.length === 0) return null;
   const last = series.episodes.length - 1;
   const canRemove = (episode: Episode) => series.canEdit || episode.uploader?.id === me.id;
@@ -165,18 +169,18 @@ function EpisodeTable({
   }
 
   return (
-    <Section title="Episodes">
+    <Section title={t.series.episodes}>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border">
-            <th className={`${HEAD} w-12`}>Episode</th>
-            <th className={HEAD}>Title</th>
-            <th className={`${HEAD} max-sm:hidden`}>Uploaded by</th>
-            <th className={`${HEAD} max-md:hidden`}>Date</th>
-            <th className={`${HEAD} text-right`}>Length</th>
+            <th className={`${HEAD} w-12`}>{t.series.episode}</th>
+            <th className={HEAD}>{t.common.title}</th>
+            <th className={`${HEAD} max-sm:hidden`}>{t.common.uploadedBy}</th>
+            <th className={`${HEAD} max-md:hidden`}>{t.common.date}</th>
+            <th className={`${HEAD} text-right`}>{t.common.length}</th>
             {hasActions && (
               <th className={`${HEAD} w-10`}>
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{t.series.actions}</span>
               </th>
             )}
           </tr>
@@ -238,13 +242,14 @@ function EpisodeMenu({
   onMove: (direction: "earlier" | "later") => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Actions for ${title}`}
+          aria-label={t.series.actionsFor(title)}
           className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 pointer-coarse:opacity-100"
         >
           <Ellipsis />
@@ -255,17 +260,17 @@ function EpisodeMenu({
           <>
             <DropdownMenuItem disabled={first} onSelect={() => onMove("earlier")}>
               <ChevronUp />
-              Move earlier
+              {t.series.moveEarlier}
             </DropdownMenuItem>
             <DropdownMenuItem disabled={last} onSelect={() => onMove("later")}>
               <ChevronDown />
-              Move later
+              {t.series.moveLater}
             </DropdownMenuItem>
           </>
         )}
         <DropdownMenuItem onSelect={onRemove}>
           <X />
-          Remove from the series
+          {t.series.removeFromSeries}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -285,6 +290,7 @@ function SeriesEditForm({
   const [description, setDescription] = useState(series.description);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const t = useT();
 
   async function save() {
     setSaving(true);
@@ -306,19 +312,19 @@ function SeriesEditForm({
       }}
     >
       <div className="grid gap-1.5">
-        <Label htmlFor="series-title">Title</Label>
+        <Label htmlFor="series-title">{t.common.title}</Label>
         <Input id="series-title" value={title} maxLength={TITLE_MAX_LENGTH} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="series-description">Description</Label>
+        <Label htmlFor="series-description">{t.common.description}</Label>
         <Textarea id="series-description" value={description} maxLength={DESCRIPTION_MAX_LENGTH} onChange={(e) => setDescription(e.target.value)} rows={4} />
       </div>
       {error && <p className="error-box">{error}</p>}
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={saving || title.trim() === ""}>
-          {saving ? "Saving..." : "Save"}
+          {saving ? t.common.saving : t.common.save}
         </Button>
-        <Button onClick={onCancel}>Cancel</Button>
+        <Button onClick={onCancel}>{t.common.cancel}</Button>
       </div>
     </form>
   );

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useT } from "../i18n.ts";
 import { Button } from "./ui/button.tsx";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "./ui/dialog.tsx";
 
@@ -22,6 +23,7 @@ export function ConfirmDialog({
   children?: ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
+  const t = useT();
   const [error, setError] = useState("");
 
   async function confirm() {
@@ -52,7 +54,7 @@ export function ConfirmDialog({
         {error && <p className="error-box">{error}</p>}
         <div className="flex justify-end gap-2">
           <DialogClose asChild>
-            <Button>Cancel</Button>
+            <Button>{t.common.cancel}</Button>
           </DialogClose>
           <Button variant="danger" onClick={() => void confirm()} disabled={busy}>
             {confirmLabel}

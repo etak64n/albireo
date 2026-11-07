@@ -2,6 +2,7 @@
 // link back to the list above the heading of a detail page, and the list of details.
 
 import type { ReactNode } from "react";
+import { useT } from "../i18n.ts";
 import { Link } from "../router.tsx";
 
 /** The heading of a list page, with the actions of the whole page on its right, over a line. */
@@ -29,8 +30,9 @@ export function Section({ title, actions, children }: { title: string; actions?:
 
 /** The link back to the list that a detail page belongs to, over its heading. */
 export function Breadcrumb({ to, children }: { to: string; children: ReactNode }) {
+  const t = useT();
   return (
-    <nav aria-label="Breadcrumb">
+    <nav aria-label={t.common.breadcrumb}>
       <Link to={to} className="text-sm font-semibold text-accent hover:underline">
         {children}
       </Link>
