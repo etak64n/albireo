@@ -64,6 +64,8 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   if (existingDatabase !== null) claim({ type: "d1_database", id: existingDatabase.id, name: existingDatabase.name });
   if (existingApp !== null) claim({ type: "access_application", id: existingApp.id, name: stack });
   if (existingWorker !== null) claim({ type: "worker", id: existingWorker.id, name: stack });
+  // A login method that the organization lacks stops the deploy here too.
+  const loginMethods = loginMethodIds(settings.production.access.loginMethods, identityProviders(cf));
 
   const resources: StackResource[] = [];
   const mark = (resource: StackResource) => {
@@ -78,8 +80,9 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   log(`${describe(databaseResource)}: ${existingDatabase === null ? "created" : "kept"}`);
   cf.run(["d1", "migrations", "apply", database.id, "--dir", "migrations"]);
 
-  // The Access application of the domain, whose only policy allows the people in the settings.
-  const body = JSON.stringify(accessApplicationBody(settings));
+  // The Access application of the domain, whose only policy allows the people in the
+  // settings, and whose sign-in page offers the login methods in the settings.
+  const body = JSON.stringify(accessApplicationBody(settings, loginMethods));
   const app = readAccessApplication(
     existingApp === null
       ? cf.json(["zero-trust", "access", "applications", "create", "--body", body])
@@ -167,12 +170,17 @@ export function describe(resource: StackResource): string {
   }
 }
 
-/** The Access application that lets only the people in the settings open the domain. */
-export function accessApplicationBody(settings: AlbireoSettings) {
+/**
+ * The Access application that lets only the people in the settings open the domain,
+ * through the login methods of these IDs. Cloudflare replaces the whole application on
+ * an update, so the body holds every setting that albireo makes.
+ */
+export function accessApplicationBody(settings: AlbireoSettings, loginMethodIds: readonly string[]) {
   return {
     name: settings.workerName,
     domain: settings.production.domain,
     type: "self_hosted",
+    allowed_idps: loginMethodIds,
     policies: [
       {
         name: "Allowed people",
@@ -181,6 +189,50 @@ export function accessApplicationBody(settings: AlbireoSettings) {
       },
     ],
   };
+}
+
+/** A login method of the Zero Trust organization, which the Cloudflare API calls an identity provider. */
+export interface LoginMethod {
+  id: string;
+  /** The kind of login method, such as onetimepin, github, or passkeys. */
+  type: string;
+  /** The name in the dashboard. Cloudflare leaves it empty for the one-time PIN. */
+  name: string;
+}
+
+/**
+ * The IDs of the login methods that the settings name. A setting names a login method
+ * by its ID, or by its type when the organization has one login method of that type.
+ */
+export function loginMethodIds(names: readonly string[], methods: readonly LoginMethod[]): string[] {
+  const path = "production.access.loginMethods";
+  const problems: string[] = [];
+  const ids: string[] = [];
+  for (const name of names) {
+    const byId = methods.find((method) => method.id === name);
+    const matches = byId === undefined ? methods.filter((method) => method.type === name) : [byId];
+    const [match] = matches;
+    if (match === undefined) {
+      problems.push(
+        `${path} names ${name}, but the Zero Trust organization has no login method of that type or ID. Add it in Zero Trust > Integrations > Identity providers.`,
+      );
+    } else if (matches.length > 1) {
+      const listed = matches.map((method) => (method.name === "" ? method.id : `${method.id} (${method.name})`)).join(", ");
+      problems.push(`The Zero Trust organization has ${matches.length} login methods of the type ${name}: ${listed}. Write the ID of the one to allow in ${path}.`);
+    } else if (!ids.includes(match.id)) {
+      ids.push(match.id);
+    }
+  }
+  if (problems.length > 0) throw new Error(problems.join("\n"));
+  return ids;
+}
+
+function identityProviders(cf: Cf): LoginMethod[] {
+  return list(cf.json(["zero-trust", "identity-providers", "list"])).flatMap((item) => {
+    const id = text(item, "id");
+    const type = text(item, "type");
+    return id === undefined || type === undefined ? [] : [{ id, type, name: text(item, "name") ?? "" }];
+  });
 }
 
 function databases(cf: Cf): { id: string; name: string }[] {

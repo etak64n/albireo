@@ -44,6 +44,9 @@ export default defineAlbireoConfig({
       teamDomain: "https://example.cloudflareaccess.com",
       // The emails that may sign in. They include every admin.
       allow: ["admin@example.com"],
+      // The login methods of your Zero Trust organization that the sign-in page offers,
+      // by type, such as "onetimepin", "github", or "passkeys"
+      loginMethods: ["onetimepin"],
     },
   },
   // `cf dev` serves albireo on localhost without Cloudflare Access.

@@ -42,6 +42,12 @@ export interface AccessSettings {
    * Access application whose only policy allows these addresses.
    */
   allow: string[];
+  /**
+   * The login methods of the Zero Trust organization that the sign-in page of the
+   * domain offers, each by its type, such as "onetimepin", "github", or "passkeys",
+   * or by its ID. The Access application allows these login methods only.
+   */
+  loginMethods: string[];
 }
 
 export interface AppearanceSettings {
@@ -242,11 +248,31 @@ function readS3Storage(storage: Fields, path: string, allowLocalHttp: boolean, p
 function readAccess(input: unknown, problems: Problems): AccessSettings | null {
   const access = readObject(input, "production.access", problems);
   if (access === null) return null;
-  checkKeys(access, "production.access.", ["teamDomain", "allow"], problems);
+  checkKeys(access, "production.access.", ["teamDomain", "allow", "loginMethods"], problems);
   const teamDomain = readOrigin(access, "teamDomain", "production.access.", false, problems);
   const allow = readEmails(access, "allow", problems, "production.access.");
   if (Array.isArray(access["allow"]) && access["allow"].length === 0) problems.push("production.access.allow must name at least one person.");
-  return { teamDomain, allow };
+  const loginMethods = readLoginMethods(access, problems);
+  return { teamDomain, allow, loginMethods };
+}
+
+// Reads the login methods of the Access application. `pnpm stack:deploy` looks them up
+// in the Zero Trust organization, because only Cloudflare knows which ones exist.
+function readLoginMethods(access: Fields, problems: Problems): string[] {
+  const path = "production.access.loginMethods";
+  if (!("loginMethods" in access)) {
+    problems.push(`${path} is missing.`);
+    return [];
+  }
+  const value = access["loginMethods"];
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && NO_WHITESPACE.test(item))) {
+    problems.push(`${path} must be a list of login method types or IDs, such as "onetimepin".`);
+    return [];
+  }
+  if (value.length === 0) problems.push(`${path} must name at least one login method.`);
+  const repeated = value.filter((item, index) => value.indexOf(item) !== index);
+  if (repeated.length > 0) problems.push(`${path} must name each login method once: ${[...new Set(repeated)].join(", ")}.`);
+  return value as string[];
 }
 
 function readTtl(root: Fields, problems: Problems): number {

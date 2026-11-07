@@ -3,10 +3,15 @@ import example from "../albireo.config.example.ts";
 import { validateSettings } from "../config/settings.ts";
 import { CfError, type Cf } from "../stack/cf.ts";
 import { parseEnvFile } from "../stack/env-file.ts";
-import { deleteStack, deployStack, STACK_TAG, stackResources, type StackResource } from "../stack/stack.ts";
+import { deleteStack, deployStack, loginMethodIds, STACK_TAG, stackResources, type LoginMethod, type StackResource } from "../stack/stack.ts";
 
 const settings = validateSettings(example);
 const SECRETS = { s3AccessKeyId: "key-id", s3SecretAccessKey: "secret" };
+// The login methods of the organization. The example settings name "onetimepin".
+const LOGIN_METHODS: LoginMethod[] = [
+  { id: "idp-otp", type: "onetimepin", name: "" },
+  { id: "idp-github", type: "github", name: "GitHub" },
+];
 
 /** Answers cf commands from a function, and records every command with its extra environment. */
 class FakeCf implements Cf {
@@ -58,6 +63,7 @@ describe("deployStack", () => {
     const cf = new FakeCf((args) => {
       const command = args.slice(0, 3).join(" ");
       if (command === "d1 list") return [{ uuid: "db-other", name: "notes" }];
+      if (command === "zero-trust identity-providers list") return LOGIN_METHODS;
       if (args[0] === "d1" && args[1] === "create") return { uuid: "db-1", name: "albireo" };
       if (command === "zero-trust access applications") {
         if (args[3] === "list") return [];
@@ -80,6 +86,7 @@ describe("deployStack", () => {
       name: "albireo",
       domain: "videos.example.com",
       type: "self_hosted",
+      allowed_idps: ["idp-otp"],
       policies: [{ name: "Allowed people", decision: "allow", include: [{ email: { email: "admin@example.com" } }] }],
     });
     // Migrations run before the new code goes live.
@@ -101,6 +108,7 @@ describe("deployStack", () => {
     const cf = new FakeCf((args) => {
       const command = args.slice(0, 3).join(" ");
       if (command === "d1 list") return [{ uuid: "db-9", name: "albireo" }];
+      if (command === "zero-trust identity-providers list") return LOGIN_METHODS;
       if (command === "zero-trust access applications") {
         if (args[3] === "list") return [{ id: "app-9", domain: "videos.example.com", aud: "aud-9" }];
         if (args[3] === "update") return { id: "app-9", aud: "aud-9" };
@@ -137,6 +145,53 @@ describe("deployStack", () => {
       "D1 database albireo belongs to the stack den",
     );
     expect(cf.calls.filter((call) => call.some((word) => ["create", "update", "delete", "deploy", "apply"].includes(word)))).toEqual([]);
+  });
+  it("changes nothing when the organization lacks a login method of the settings", () => {
+    const cf = new FakeCf((args) => {
+      const command = args.slice(0, 3).join(" ");
+      if (command === "d1 list") return [];
+      if (command === "zero-trust identity-providers list") return [{ id: "idp-github", type: "github", name: "GitHub" }];
+      if (command === "zero-trust access applications") return [];
+      if (command === "workers get albireo") return notFound(args);
+      return {};
+    });
+
+    expect(() => deployStack({ settings, secrets: SECRETS, cf, log: () => {}, writeSecretsFile: writeSecretsFile([], []) })).toThrow(
+      "production.access.loginMethods names onetimepin, but the Zero Trust organization has no login method of that type or ID.",
+    );
+    expect(cf.calls.filter((call) => call.some((word) => ["create", "update", "delete", "deploy", "apply"].includes(word)))).toEqual([]);
+  });
+});
+
+describe("loginMethodIds", () => {
+  const methods: LoginMethod[] = [
+    ...LOGIN_METHODS,
+    { id: "idp-passkeys", type: "passkeys", name: "Passkeys" },
+    { id: "idp-okta", type: "oidc", name: "Okta" },
+    { id: "idp-entra", type: "oidc", name: "Entra ID" },
+  ];
+
+  it("finds each login method by its type or its ID, in the order of the settings", () => {
+    expect(loginMethodIds(["passkeys", "idp-okta", "onetimepin"], methods)).toEqual(["idp-passkeys", "idp-okta", "idp-otp"]);
+  });
+
+  it("allows a login method once when the settings name it by its type and by its ID", () => {
+    expect(loginMethodIds(["github", "idp-github"], methods)).toEqual(["idp-github"]);
+  });
+
+  it("asks for the ID when the organization has several login methods of the type", () => {
+    expect(() => loginMethodIds(["oidc"], methods)).toThrow(
+      "The Zero Trust organization has 2 login methods of the type oidc: idp-okta (Okta), idp-entra (Entra ID). Write the ID of the one to allow in production.access.loginMethods.",
+    );
+  });
+
+  it("names every login method that the organization lacks", () => {
+    expect(() => loginMethodIds(["google", "onetimepin", "saml"], methods)).toThrow(
+      [
+        "production.access.loginMethods names google, but the Zero Trust organization has no login method of that type or ID. Add it in Zero Trust > Integrations > Identity providers.",
+        "production.access.loginMethods names saml, but the Zero Trust organization has no login method of that type or ID. Add it in Zero Trust > Integrations > Identity providers.",
+      ].join("\n"),
+    );
   });
 });
 

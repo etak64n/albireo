@@ -110,6 +110,24 @@ describe("validateSettings", () => {
     ]);
   });
 
+  it("offers at least one login method", () => {
+    expect(problemsOf(settingsWith({ "production.access.loginMethods": [] }))).toEqual([
+      "production.access.loginMethods must name at least one login method.",
+    ]);
+  });
+
+  it("names each login method once", () => {
+    expect(problemsOf(settingsWith({ "production.access.loginMethods": ["onetimepin", "github", "onetimepin"] }))).toEqual([
+      "production.access.loginMethods must name each login method once: onetimepin.",
+    ]);
+  });
+
+  it("names login methods by a type or an ID without spaces", () => {
+    expect(problemsOf(settingsWith({ "production.access.loginMethods": ["one-time pin"] }))).toEqual([
+      'production.access.loginMethods must be a list of login method types or IDs, such as "onetimepin".',
+    ]);
+  });
+
   it("accepts no admins", () => {
     expect(validateSettings(settingsWith({ admins: [] })).admins).toEqual([]);
   });

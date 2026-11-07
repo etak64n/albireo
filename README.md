@@ -454,7 +454,7 @@ albireo deploys as one stack, as in AWS CloudFormation: one command creates or u
 A stack has three resources.
 
 - The D1 database of `database.name`, which keeps the library
-- The Access application of `production.domain`, whose only policy allows the emails in `production.access.allow`
+- The Access application of `production.domain`, whose only policy allows the emails in `production.access.allow`, and whose sign-in page offers the login methods in `production.access.loginMethods`
 - The Worker, which serves the browser app and the API on `production.domain`
 
 Each resource carries the tag `albireo.stack=<workerName>` (Cloudflare Resource Tagging), so Cloudflare keeps the list of the resources, and your machine keeps no state.
@@ -489,6 +489,8 @@ cp albireo.config.example.ts albireo.config.ts
 ```
 
 In `production.access.allow`, write the emails of the people who may sign in, every admin included: Access lets in only these people.
+In `production.access.loginMethods`, write the login methods that the sign-in page offers, by type, such as `onetimepin`.
+Zero Trust > Integrations > Identity providers in the Cloudflare dashboard lists the login methods of your organization, and `pnpm stack:deploy` stops if the organization lacks one of them.
 The [Configuration reference](#configuration-reference) describes every setting.
 
 Step 3: set CORS on the bucket with the rules in examples/bucket-cors.json.
@@ -579,7 +581,7 @@ pnpm install --frozen-lockfile
 pnpm stack:deploy
 ```
 
-`pnpm stack:deploy` applies the new files in migrations/ before the new code goes live, and it updates the Access policy to `production.access.allow`.
+`pnpm stack:deploy` applies the new files in migrations/ before the new code goes live, and it updates the Access application to `production.access.allow` and `production.access.loginMethods`.
 
 ### Delete a deployment
 
@@ -778,6 +780,9 @@ export default defineAlbireoConfig({
       teamDomain: "https://example.cloudflareaccess.com",
       // The emails that may sign in. They include every admin.
       allow: ["admin@example.com"],
+      // The login methods of your Zero Trust organization that the sign-in page offers,
+      // by type, such as "onetimepin", "github", or "passkeys"
+      loginMethods: ["onetimepin"],
     },
   },
   // `cf dev` serves albireo on localhost without Cloudflare Access.
@@ -842,6 +847,10 @@ Every setting is required, and a key that albireo does not read is an error, whi
 - `production.access.allow`
   - The people who may sign in, by email. `pnpm stack:deploy` gives the domain an Access application whose only policy allows them.
   - A list of one or more lowercase email addresses, every admin included
+- `production.access.loginMethods`
+  - The login methods that the sign-in page offers. The Access application allows only these.
+  - A list of one or more login methods of your Zero Trust organization, each by its type, such as `"onetimepin"`, `"github"`, or `"passkeys"`. When the organization has more than one login method of a type, write the ID of the one to allow.
+  - `pnpm stack:deploy` looks them up in the organization, and stops before it changes anything if one of them does not exist. `pnpm exec cf zero-trust identity-providers list` lists the type and the ID of each login method.
 - `development.signInAs`
   - The person that `cf dev` signs in, because Access does not run on your machine
   - A lowercase email address
