@@ -174,6 +174,22 @@ describe("deployStack", () => {
     expect(cf.calls.filter((call) => call.some((word) => ["create", "update", "delete", "deploy", "apply"].includes(word)))).toEqual([]);
   });
 
+  it("names the permission when the API token may not read the Zero Trust organization", () => {
+    const cf = new FakeCf((args) => {
+      const command = args.slice(0, 3).join(" ");
+      if (command === "d1 list") return [];
+      if (command === "zero-trust organization get") return new CfError(args, "403 Forbidden · HTTP /accounts/x/access/organizations");
+      if (command === "zero-trust access applications") return [];
+      if (command === "workers get albireo") return notFound(args);
+      return {};
+    });
+
+    expect(() => deployStack({ settings, secrets: SECRETS, cf, log: () => {}, writeSecretsFile: writeSecretsFile([], []) })).toThrow(
+      "needs Access: Organizations, Identity Providers, and Groups Read",
+    );
+    expect(cf.calls.filter((call) => call.some((word) => ["create", "update", "delete", "deploy", "apply"].includes(word)))).toEqual([]);
+  });
+
   it("changes nothing when the account has no Zero Trust organization", () => {
     const cf = new FakeCf((args) => {
       const command = args.slice(0, 3).join(" ");

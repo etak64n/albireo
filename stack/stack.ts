@@ -249,6 +249,11 @@ function accessTeamDomain(cf: Cf): string {
   try {
     organization = cf.json(["zero-trust", "organization", "get"]);
   } catch (error) {
+    if (error instanceof CfError && (error.status === 401 || error.status === 403)) {
+      throw new Error(
+        "Cloudflare refused to show the Zero Trust organization. An API token that deploys albireo needs Access: Organizations, Identity Providers, and Groups Read.",
+      );
+    }
     if (!(error instanceof CfError && error.status === 404)) throw error;
   }
   const domain = text(organization, "auth_domain");
