@@ -17,6 +17,7 @@ import type {
   SearchResponse,
   StartAttachmentResponse,
   SeriesResponse,
+  SessionsResponse,
   SignInResponse,
   ThumbnailUploadResponse,
   UserResponse,
@@ -412,6 +413,56 @@ describe("sign-in", () => {
     const response = await app.request("/api/me/sign-in");
     expect(response.status).toBe(200);
     expect(await body<SignInResponse>(response)).toEqual({ signIn: null });
+  });
+});
+
+describe("sessions", () => {
+  const MAC_CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+  const IPHONE_SAFARI =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1";
+  // Two tokens of one person, issued a minute apart and lasting a day, as from two devices.
+  const ISSUED = Math.floor(Date.now() / 1000) - 120;
+  const DAY = 24 * 60 * 60;
+
+  async function sessionsWith(app: TestApp, token: string): Promise<SessionsResponse> {
+    return body<SessionsResponse>(await app.request("/api/me/sessions", { headers: { "cf-access-jwt-assertion": token } }));
+  }
+
+  it("writes down each Access token as a session, with its device and its times, and marks the current one", async () => {
+    const app = await createTestApp();
+    const mac = await app.access.sign({ issuedAt: ISSUED, expiresAt: ISSUED + DAY });
+    const phone = await app.access.sign({ issuedAt: ISSUED + 60, expiresAt: ISSUED + 60 + DAY });
+    await app.request("/api/me", { headers: { "cf-access-jwt-assertion": mac, "user-agent": MAC_CHROME } });
+    await app.request("/api/me", { headers: { "cf-access-jwt-assertion": phone, "user-agent": IPHONE_SAFARI } });
+
+    const { sessions } = await sessionsWith(app, mac);
+    expect(sessions?.map((session) => [session.browser, session.os, session.current])).toEqual([
+      ["Safari", "iOS", false],
+      ["Chrome", "macOS", true],
+    ]);
+    expect(sessions?.[1]).toMatchObject({
+      city: "",
+      country: "",
+      signedInAt: new Date(ISSUED * 1000).toISOString(),
+      expiresAt: new Date((ISSUED + DAY) * 1000).toISOString(),
+    });
+  });
+
+  it("forgets the session of the request when the person logs out of it", async () => {
+    const app = await createTestApp();
+    const mac = await app.access.sign({ issuedAt: ISSUED, expiresAt: ISSUED + DAY });
+    const phone = await app.access.sign({ issuedAt: ISSUED + 60, expiresAt: ISSUED + 60 + DAY });
+    await app.request("/api/me", { headers: { "cf-access-jwt-assertion": mac, "user-agent": MAC_CHROME } });
+    const response = await app.request("/api/me/sessions/current", { method: "DELETE", headers: { "cf-access-jwt-assertion": mac } });
+    expect(response.status).toBe(204);
+
+    const { sessions } = await sessionsWith(app, phone);
+    expect(sessions?.map((session) => session.current)).toEqual([true]);
+  });
+
+  it("has no sessions in local development mode, where Access does not run", async () => {
+    const app = await createTestApp({ env: { AUTH_MODE: "local-development", LOCAL_USER_EMAIL: "dev@example.com" } });
+    expect(await body<SessionsResponse>(await app.request("/api/me/sessions"))).toEqual({ sessions: null });
   });
 });
 

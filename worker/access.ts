@@ -13,6 +13,10 @@ export type KeySetProvider = (teamDomain: string) => JWTVerifyGetKey;
 
 export interface AccessIdentity {
   email: string | null;
+  /** When Access issued the token, or null when the token does not say. */
+  issuedAt: string | null;
+  /** When the token expires, or null when the token does not say. */
+  expiresAt: string | null;
 }
 
 export class AccessDeniedError extends Error {
@@ -44,7 +48,11 @@ export async function verifyAccessToken(
   }
   try {
     const { payload } = await jwtVerify(token, keySet, { issuer: access.teamDomain, audience: access.aud });
-    return { email: typeof payload["email"] === "string" ? payload["email"] : null };
+    return {
+      email: typeof payload["email"] === "string" ? payload["email"] : null,
+      issuedAt: typeof payload.iat === "number" ? new Date(payload.iat * 1000).toISOString() : null,
+      expiresAt: typeof payload.exp === "number" ? new Date(payload.exp * 1000).toISOString() : null,
+    };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new AccessDeniedError(`The Cloudflare Access token is not valid: ${reason}`);

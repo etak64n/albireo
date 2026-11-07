@@ -24,6 +24,7 @@ import type {
   StartAttachmentRequest,
   StartAttachmentResponse,
   SeriesResponse,
+  SessionsResponse,
   SignInResponse,
   ThumbnailUploadResponse,
   UpdateMeRequest,
@@ -83,6 +84,8 @@ export const api = {
   commitAvatar: () => request<MeResponse>("/api/me/avatar/commit", "POST"),
   removeAvatar: () => request<MeResponse>("/api/me/avatar", "DELETE"),
   getSignIn: () => request<SignInResponse>("/api/me/sign-in", "GET"),
+  getSessions: () => request<SessionsResponse>("/api/me/sessions", "GET"),
+  endSession: () => request<void>("/api/me/sessions/current", "DELETE"),
   getUser: (id: string) => request<UserResponse>(`/api/users/${id}`, "GET"),
   getHistory: (cursor: string | null) =>
     request<HistoryResponse>(cursor === null ? "/api/history" : `/api/history?cursor=${encodeURIComponent(cursor)}`, "GET"),

@@ -6,7 +6,7 @@ import { api } from "../api.ts";
 import { useLibrary } from "../library.tsx";
 import { cn } from "../lib/utils.ts";
 import { Link, navigate, useLocationSearch, usePathname } from "../router.tsx";
-import { useSession } from "../session.tsx";
+import { logOut, useSession } from "../session.tsx";
 import { useUploads } from "../uploads.tsx";
 import { Avatar } from "./Avatar.tsx";
 import { Button } from "./ui/button.tsx";
@@ -164,7 +164,7 @@ function AccountMenu() {
           Account
         </DropdownMenuItem>
         {logoutUrl !== null && (
-          <DropdownMenuItem onSelect={() => window.location.assign(logoutUrl)}>
+          <DropdownMenuItem onSelect={() => void logOut(logoutUrl)}>
             <LogOut />
             Log out
           </DropdownMenuItem>

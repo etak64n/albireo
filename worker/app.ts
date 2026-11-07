@@ -44,6 +44,7 @@ import {
   type SeriesDetail,
   type SeriesResponse,
   type SeriesSummary,
+  type SessionsResponse,
   type SignInResponse,
   type ThumbnailUploadResponse,
   type UserProfile,
@@ -84,6 +85,7 @@ import { SeriesRepository, type SeriesRecord } from "./series.ts";
 import { StorageError, type CompletedPart, type ObjectStore } from "./storage.ts";
 import { MAX_OBJECT_SIZE, planParts, type PartPlan } from "./upload-plan.ts";
 import { UserRepository, type UserRecord } from "./users.ts";
+import { deviceOf, placeOf, SessionRepository, sessionIdOf } from "./sessions.ts";
 import { VideoRepository, type ListCursor, type VideoRecord, type WatchedVideoRecord } from "./videos.ts";
 
 export type IdKind = "video" | "user" | "series" | "comment" | "attachment";
@@ -112,7 +114,8 @@ interface Viewer {
 
 interface AppEnv {
   Bindings: Env;
-  Variables: { requestId: string; config: RuntimeConfig; viewer: Viewer };
+  /** sessionId is the ID of the Access session of the request, and null under cf dev. */
+  Variables: { requestId: string; config: RuntimeConfig; viewer: Viewer; sessionId: string | null };
 }
 
 type UploadingVideo = VideoRecord & { uploadId: string };
@@ -146,6 +149,8 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
     const config = readRuntimeConfig(c.env, c.req.url);
     c.set("config", config);
     let email: string;
+    // The Access session of the request, which albireo writes down once it knows the person.
+    let session: { token: string; signedInAt: string; expiresAt: string } | null = null;
     if (config.authMode === "local-development") {
       if (!isLocalhost(new URL(c.req.url))) {
         throw new HttpError(403, "forbidden", "Local development mode answers requests to localhost only.");
@@ -160,9 +165,30 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
         throw new AccessDeniedError("The Cloudflare Access token names no person. albireo needs a person who signs in.");
       }
       email = identity.email.toLowerCase();
+      if (token !== undefined && identity.issuedAt !== null && identity.expiresAt !== null) {
+        session = { token, signedInAt: identity.issuedAt, expiresAt: identity.expiresAt };
+      }
     }
-    const user = await new UserRepository(c.env.DB).ensure(email, () => deps.newId("user"), now());
+    // One time for the whole request, so that the person and the session agree.
+    const at = deps.now();
+    const user = await new UserRepository(c.env.DB).ensure(email, () => deps.newId("user"), at.toISOString());
+    let sessionId: string | null = null;
+    if (session !== null) {
+      sessionId = await sessionIdOf(session.token);
+      await new SessionRepository(c.env.DB).record(
+        {
+          id: sessionId,
+          userId: user.id,
+          ...deviceOf(c.req.header("user-agent")),
+          ...placeOf((c.req.raw as { cf?: unknown }).cf),
+          signedInAt: session.signedInAt,
+          expiresAt: session.expiresAt,
+        },
+        at,
+      );
+    }
     c.set("viewer", { ...viewerOf(user), isAdmin: config.admins.has(user.email) });
+    c.set("sessionId", sessionId);
     await next();
   });
 
@@ -197,6 +223,36 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
       throw new HttpError(502, "access_error", "Cloudflare Access answered an identity without the login method or the time of the sign-in.");
     }
     return c.json<SignInResponse>({ signIn });
+  });
+
+  // The sessions of the person that albireo saw, for their account page. Expired ones are
+  // forgotten here. Under cf dev, where Access does not run, there are none.
+  app.get("/api/me/sessions", async (c) => {
+    if (c.get("config").authMode === "local-development") return c.json<SessionsResponse>({ sessions: null });
+    const viewer = c.get("viewer");
+    const repository = new SessionRepository(c.env.DB);
+    const at = now();
+    await repository.removeExpired(viewer.id, at);
+    const current = c.get("sessionId");
+    const sessions = (await repository.listActive(viewer.id, at)).map((session) => ({
+      browser: session.browser,
+      os: session.os,
+      city: session.city,
+      country: session.country,
+      signedInAt: session.signedInAt,
+      lastActiveAt: session.lastSeenAt,
+      expiresAt: session.expiresAt,
+      current: session.id === current,
+    }));
+    return c.json<SessionsResponse>({ sessions });
+  });
+
+  // Forgets the session of this request just before the browser logs out of Access, so that
+  // the account page stops listing it. albireo cannot end the other sessions: Access keeps them.
+  app.delete("/api/me/sessions/current", async (c) => {
+    const id = c.get("sessionId");
+    if (id !== null) await new SessionRepository(c.env.DB).remove(c.get("viewer").id, id);
+    return c.body(null, 204);
   });
 
   app.post("/api/me/avatar", async (c) => {

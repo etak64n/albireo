@@ -42,3 +42,12 @@ export function useSession(): Session {
   if (session === null) throw new Error("useSession needs a SessionProvider around the page.");
   return session;
 }
+
+/**
+ * Logs out of Access. albireo first forgets the session of this device, so that the account
+ * page stops listing it, but logging out goes ahead even when that fails.
+ */
+export async function logOut(logoutUrl: string): Promise<void> {
+  await api.endSession().catch(() => undefined);
+  window.location.assign(logoutUrl);
+}

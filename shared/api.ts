@@ -53,6 +53,27 @@ export interface SignIn {
   passkeys: Passkey[] | null;
 }
 
+/** A session of the signed-in person, as albireo saw it: one Access token on one device. */
+export interface Session {
+  /** The browser and the operating system, each "" when albireo does not know it. */
+  browser: string;
+  os: string;
+  /** The city and the two-letter country code of the first request, each "" when Cloudflare did not tell. */
+  city: string;
+  country: string;
+  signedInAt: string;
+  /** The last request of the session, which albireo writes at most every five minutes. */
+  lastActiveAt: string;
+  expiresAt: string;
+  /** True for the session of this request. */
+  current: boolean;
+}
+
+export interface SessionsResponse {
+  /** null when nobody signs in through Access, as under `cf dev`. */
+  sessions: Session[] | null;
+}
+
 /** A passkey that the person registered with Access, to sign in without a code or a password. */
 export interface Passkey {
   name: string;

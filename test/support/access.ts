@@ -16,6 +16,8 @@ export interface TokenOptions {
   email?: string | null;
   /** Expiration as a time span such as "5m", or as seconds since the epoch. */
   expiresAt?: string | number;
+  /** Issue time in seconds since the epoch. The default is now. */
+  issuedAt?: number;
 }
 
 export interface AccessKeys {
@@ -32,7 +34,7 @@ export async function createAccessKeys(): Promise<AccessKeys> {
       .setProtectedHeader({ alg: "RS256", kid: "test-key" })
       .setIssuer(options.issuer ?? TEAM_DOMAIN)
       .setAudience(options.audience ?? AUD)
-      .setIssuedAt()
+      .setIssuedAt(options.issuedAt)
       .setExpirationTime(options.expiresAt ?? "5m")
       .sign(privateKey);
   return { keySet, sign };

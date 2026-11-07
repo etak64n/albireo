@@ -54,3 +54,24 @@ export function DetailList({ items, layout = "column" }: { items: { label: strin
     </dl>
   );
 }
+
+/**
+ * Facts of one thing as the rows of a table, as on the settings pages of Stripe: the name
+ * in a column on the left, the value on the right, and a fine line under each row.
+ */
+export function DetailTable({ items }: { items: { label: string; value: ReactNode }[] }) {
+  return (
+    <table className="w-full border-t border-border text-sm">
+      <tbody>
+        {items.map((item) => (
+          <tr key={item.label} className="border-b border-hairline">
+            <th scope="row" className="w-36 px-2 py-3 text-left align-top font-semibold text-strong sm:w-56">
+              {item.label}
+            </th>
+            <td className="px-2 py-3 align-top text-strong">{item.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
