@@ -33,6 +33,8 @@ export interface UserProfile extends UserSummary {
 export interface Me extends UserProfile {
   email: string;
   isAdmin: boolean;
+  /** When the person first signed in, which made their record in the library. */
+  joinedAt: string;
   /** Where to send the browser to sign out, or null when nobody signs in, as under `cf dev`. */
   logoutUrl: string | null;
 }
@@ -47,6 +49,16 @@ export interface SignIn {
   method: string;
   /** When the person signed in. */
   signedInAt: string;
+  /** The passkeys of the person, or null when Access does not report them. */
+  passkeys: Passkey[] | null;
+}
+
+/** A passkey that the person registered with Access, to sign in without a code or a password. */
+export interface Passkey {
+  name: string;
+  addedAt: string;
+  /** null when the passkey was never used. */
+  lastUsedAt: string | null;
 }
 
 export interface SignInResponse {

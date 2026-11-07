@@ -27,7 +27,11 @@ export interface TestAppOptions {
 }
 
 /** The identity that Access reports by default: a sign-in with a passkey at 2026-11-07T05:42:45Z. */
-export const SIGNED_IN_IDENTITY = { idp: { id: "idp-passkeys", type: "passkeys" }, iat: 1_794_030_165 };
+export const SIGNED_IN_IDENTITY = {
+  idp: { id: "idp-passkeys", type: "passkeys" },
+  iat: 1_794_030_165,
+  passkeys: [{ id: "passkey-1", name: "1Password", created_at: "2026-11-07T05:42:26.602Z", last_used_at: "2026-11-07T05:42:46.792Z" }],
+};
 
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
   const access = await createAccessKeys();

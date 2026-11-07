@@ -106,6 +106,7 @@ interface Viewer {
   displayName: string;
   bio: string;
   avatarKey: string | null;
+  joinedAt: string;
   isAdmin: boolean;
 }
 
@@ -771,7 +772,7 @@ function searchOffset(cursor: string | undefined): number {
 }
 
 function viewerOf(user: UserRecord): Omit<Viewer, "isAdmin"> {
-  return { id: user.id, email: user.email, displayName: user.displayName, bio: user.bio, avatarKey: user.avatarKey };
+  return { id: user.id, email: user.email, displayName: user.displayName, bio: user.bio, avatarKey: user.avatarKey, joinedAt: user.createdAt };
 }
 
 async function reloadViewer(users: UserRepository, viewer: Viewer): Promise<Viewer> {
@@ -788,6 +789,7 @@ async function toMe(viewer: Viewer, config: RuntimeConfig, store: ObjectStore): 
     bio: viewer.bio,
     email: viewer.email,
     isAdmin: viewer.isAdmin,
+    joinedAt: viewer.joinedAt,
     logoutUrl: config.authMode === "cloudflare-access" ? ACCESS_LOGOUT_PATH : null,
   };
 }

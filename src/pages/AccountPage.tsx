@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import type { SignIn } from "../../shared/api.ts";
+import type { Passkey, SignIn } from "../../shared/api.ts";
 import { api } from "../api.ts";
-import { DetailList, PageHeader } from "../components/Page.tsx";
+import { DetailList, PageHeader, Section } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
-import { formatDateTime } from "../lib/format.ts";
+import { formatDate, formatDateTime } from "../lib/format.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { useSession } from "../session.tsx";
 
@@ -27,7 +27,10 @@ const LOGIN_METHOD_NAMES: Record<string, string> = {
   saml: "SAML",
 };
 
-/** What only the signed-in person sees about themselves: the email that they signed in with, and how and when they signed in. */
+/**
+ * What only the signed-in person sees about themselves: their email, their role, and the
+ * day they joined, then how and when they signed in, and their passkeys.
+ */
 export function AccountPage() {
   const { me } = useSession();
   // How the person signed in: undefined while it loads, and null under cf dev, where Access does not run.
@@ -50,28 +53,57 @@ export function AccountPage() {
     };
   }, []);
 
+  // Access tells the rest under Sign-in. It has nothing to tell under cf dev, where it does not run.
+  const signInItems =
+    signIn === undefined && error === null
+      ? [
+          { label: "Login method", value: <Skeleton className="h-5 w-24" /> },
+          { label: "Signed in", value: <Skeleton className="h-5 w-36" /> },
+        ]
+      : signIn
+        ? [
+            { label: "Login method", value: LOGIN_METHOD_NAMES[signIn.method] ?? signIn.method },
+            { label: "Signed in", value: formatDateTime(signIn.signedInAt) },
+            ...(signIn.passkeys !== null && signIn.passkeys.length > 0 ? [{ label: "Passkeys", value: <PasskeyList passkeys={signIn.passkeys} /> }] : []),
+          ]
+        : [];
+
   return (
     <Shell>
       <PageHeader title="Account" />
-      <div className="grid w-full max-w-[560px] gap-6">
+      <div className="grid w-full max-w-[560px] gap-8">
         <DetailList
           items={[
             { label: "Email", value: me.email },
-            ...(signIn === undefined && error === null
-              ? [
-                  { label: "Login method", value: <Skeleton className="h-5 w-24" /> },
-                  { label: "Signed in", value: <Skeleton className="h-5 w-36" /> },
-                ]
-              : signIn
-                ? [
-                    { label: "Login method", value: LOGIN_METHOD_NAMES[signIn.method] ?? signIn.method },
-                    { label: "Signed in", value: formatDateTime(signIn.signedInAt) },
-                  ]
-                : []),
+            // Admins edit every video and every series, and everyone else edits their own.
+            { label: "Role", value: me.isAdmin ? "Admin" : "Member" },
+            { label: "Joined", value: formatDate(me.joinedAt) },
           ]}
         />
-        {error !== null && <p className="error-box">{error instanceof Error ? error.message : String(error)}</p>}
+        {(signInItems.length > 0 || error !== null) && (
+          <Section title="Sign-in">
+            {signInItems.length > 0 && <DetailList items={signInItems} />}
+            {error !== null && <p className="error-box">{error instanceof Error ? error.message : String(error)}</p>}
+          </Section>
+        )}
       </div>
     </Shell>
+  );
+}
+
+/** The passkeys of the person, each with the day it was added and the last time it was used. */
+function PasskeyList({ passkeys }: { passkeys: Passkey[] }) {
+  return (
+    <ul className="grid gap-2">
+      {passkeys.map((passkey) => (
+        <li key={`${passkey.name} ${passkey.addedAt}`} className="grid gap-0.5">
+          <span className="text-strong">{passkey.name}</span>
+          <span className="text-subdued">
+            Added {formatDate(passkey.addedAt)}
+            {passkey.lastUsedAt !== null && ` · Last used ${formatDateTime(passkey.lastUsedAt)}`}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

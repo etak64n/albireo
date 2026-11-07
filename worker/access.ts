@@ -6,6 +6,7 @@
 // exposing the library.
 
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
+import type { Passkey, SignIn } from "../shared/api.ts";
 import type { AccessConfig } from "./runtime-config.ts";
 
 export type KeySetProvider = (teamDomain: string) => JWTVerifyGetKey;
@@ -65,15 +66,35 @@ export const fetchAccessIdentity: IdentityFetcher = async (teamDomain, token) =>
 };
 
 /**
- * Reads the login method and the time of the sign-in from an identity of Access, or
- * returns null when either is missing. Access writes the time in seconds since 1970.
+ * Reads the login method, the time of the sign-in, and the passkeys from an identity of
+ * Access, or returns null when the method or the time is missing. Access writes the time
+ * in seconds since 1970.
  */
-export function readSignIn(identity: unknown): { method: string; signedInAt: string } | null {
-  if (typeof identity !== "object" || identity === null) return null;
-  const { idp, iat } = identity as { idp?: unknown; iat?: unknown };
-  const method = typeof idp === "object" && idp !== null ? (idp as { type?: unknown }).type : undefined;
+export function readSignIn(identity: unknown): SignIn | null {
+  if (!isRecord(identity)) return null;
+  const idp = identity["idp"];
+  const iat = identity["iat"];
+  const method = isRecord(idp) ? idp["type"] : undefined;
   if (typeof method !== "string" || method === "" || typeof iat !== "number" || !Number.isFinite(iat)) return null;
-  return { method, signedInAt: new Date(iat * 1000).toISOString() };
+  return { method, signedInAt: new Date(iat * 1000).toISOString(), passkeys: readPasskeys(identity["passkeys"]) };
+}
+
+// Access lists the passkeys of the person in the identity, each with its name and its dates.
+function readPasskeys(value: unknown): Passkey[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    const name = item["name"];
+    const added = item["created_at"];
+    const lastUsed = item["last_used_at"];
+    if (typeof name !== "string" || typeof added !== "string" || Number.isNaN(Date.parse(added))) return [];
+    const lastUsedAt = typeof lastUsed === "string" && !Number.isNaN(Date.parse(lastUsed)) ? new Date(lastUsed).toISOString() : null;
+    return [{ name, addedAt: new Date(added).toISOString(), lastUsedAt }];
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** True for requests to this machine, the only place where local development mode answers. */

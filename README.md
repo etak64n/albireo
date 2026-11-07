@@ -363,9 +363,13 @@ The channel settings (`/settings/channel`) change the picture, the display name,
 - You move and zoom the picture to choose a circle. The browser turns it into a JPEG of 256 by 256 pixels (src/lib/image.ts).
 - Removing the picture brings back the default person icon. The file stays in the bucket.
 
-The account page (`/settings/account`) shows what only you see: the email that you signed in with, the login method of the session, such as a passkey, and the time of the sign-in (src/pages/AccountPage.tsx).
-The token that Access adds to each request leaves out the login method, so the Worker asks Access for the identity of the session (`/cdn-cgi/access/get-identity` on the team domain).
-Under `cf dev`, where Access does not run, the page shows the email alone.
+The account page (`/settings/account`) shows what only you see (src/pages/AccountPage.tsx).
+
+- Your email, your role, Admin or Member, and the day you joined, which is the day of your first sign-in
+- Under Sign-in, the login method of the session, such as a passkey, the time of the sign-in, and the passkeys that you registered with Access
+
+The token that Access adds to each request leaves out the login method and the passkeys, so the Worker asks Access for the identity of the session (`/cdn-cgi/access/get-identity` on the team domain).
+Under `cf dev`, where Access does not run, the page has no Sign-in.
 
 The menu under your picture in the header links to your channel, to the channel settings, to the account page, and, with Access, to logging out.
 

@@ -363,8 +363,25 @@ describe("sign-in", () => {
     const token = await app.access.sign({ email: VIEWER_EMAIL });
     const response = await app.request("/api/me/sign-in", { headers: { "cf-access-jwt-assertion": token } });
     expect(response.status).toBe(200);
-    expect(await body<SignInResponse>(response)).toEqual({ signIn: { method: "passkeys", signedInAt: "2026-11-07T05:42:45.000Z" } });
+    expect(await body<SignInResponse>(response)).toEqual({
+      signIn: {
+        method: "passkeys",
+        signedInAt: "2026-11-07T05:42:45.000Z",
+        passkeys: [{ name: "1Password", addedAt: "2026-11-07T05:42:26.602Z", lastUsedAt: "2026-11-07T05:42:46.792Z" }],
+      },
+    });
     expect(asked).toEqual([{ teamDomain: TEAM_DOMAIN, token }]);
+  });
+
+  it("leaves out the passkeys when Access does not report them, and a passkey that was never used", async () => {
+    const reported = await createTestApp({
+      fetchIdentity: async () => ({ ...SIGNED_IN_IDENTITY, passkeys: [{ name: "Laptop", created_at: "2026-11-01T00:00:00Z", last_used_at: null }] }),
+    });
+    expect((await body<SignInResponse>(await reported.signedRequest("/api/me/sign-in"))).signIn?.passkeys).toEqual([
+      { name: "Laptop", addedAt: "2026-11-01T00:00:00.000Z", lastUsedAt: null },
+    ]);
+    const silent = await createTestApp({ fetchIdentity: async () => ({ idp: SIGNED_IN_IDENTITY.idp, iat: SIGNED_IN_IDENTITY.iat }) });
+    expect((await body<SignInResponse>(await silent.signedRequest("/api/me/sign-in"))).signIn?.passkeys).toBeNull();
   });
 
   it("answers 502 when Access does not tell the login method", async () => {
@@ -409,6 +426,7 @@ describe("people", () => {
       bio: "",
       email: VIEWER_EMAIL,
       isAdmin: false,
+      joinedAt: "2026-11-04T00:00:01.000Z",
       logoutUrl: "/cdn-cgi/access/logout",
     });
     // The second request finds the same person.
