@@ -428,7 +428,7 @@ The project installs the Cloudflare CLI, `cf`, as a development dependency, so y
 
 ```bash
 # Install the dependency versions that pnpm-lock.yaml records
-pnpm install --frozen-lockfile
+pnpm install
 
 # Create your settings from the example. The example values work locally as they are.
 cp albireo.config.example.ts albireo.config.ts
@@ -595,7 +595,7 @@ git fetch --tags
 git checkout v0.2.0
 
 # Install the dependency versions of that release
-pnpm install --frozen-lockfile
+pnpm install
 
 # Apply the new migrations, then deploy the new code
 pnpm stack:deploy
