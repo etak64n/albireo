@@ -32,8 +32,8 @@ body { font-family: "Noto Sans", sans-serif; color: ${INK}; background: #ffffff;
 .slide { position: relative; width: 1280px; height: 720px; overflow: hidden; padding: 80px 112px 0; background: #ffffff; break-after: page; }
 .slide:last-child { break-after: auto; }
 .kicker { font-size: 16px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: ${SLATE}; }
-h1 { margin-top: 24px; font-size: 68px; line-height: 1.1; font-weight: 700; letter-spacing: -0.015em; color: ${NAVY}; max-width: 860px; }
-h2 { margin-top: 14px; font-size: 44px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: ${NAVY}; }
+h1 { margin-top: 24px; font-size: 68px; line-height: 1.1; font-weight: 700; letter-spacing: -0.015em; color: ${NAVY}; max-width: 860px; text-wrap: balance; }
+h2 { margin-top: 14px; font-size: 44px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: ${NAVY}; text-wrap: balance; }
 .lead { margin-top: 26px; font-size: 26px; line-height: 1.45; color: ${SLATE}; max-width: 760px; }
 .rule { margin-top: 36px; width: 64px; height: 6px; border-radius: 3px; background: ${GOLD}; }
 .cover { padding-top: 150px; }

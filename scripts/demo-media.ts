@@ -69,7 +69,8 @@ function lobbyEvening(): string {
     `${strength}*exp(-(pow(X-W*(${x}),2)+pow(Y-H*(${y}),2))/(2*pow(H*${size},2)))`;
   const light = `255*min(1,${glow("0.33+0.14*sin(T*0.31)", "0.42+0.10*cos(T*0.23)", 0.3, 0.42)}+${glow("0.70+0.11*cos(T*0.27)", "0.62+0.09*sin(T*0.19)", 0.24, 0.3)})`;
   return [
-    `gradients=s=640x360:r=${RATE}:c0=0x1d1b4f:c1=0x4a2f6e:c2=0xa8587e:c3=0xf0a274:n=4:x0=0:y0=360:x1=640:y1=0:speed=0.005,scale=${WIDTH}:${HEIGHT}:flags=bicubic,format=yuv420p[sky]`,
+    // A sky from deep blue at the top to peach at the horizon, which tilts a little.
+    `gradients=s=640x360:r=${RATE}:c0=0x1d1b4f:c1=0x4a2f6e:c2=0xa8587e:c3=0xf0a274:n=4:x0=320:y0=0:x1=320:y1=360:speed=0.0015,scale=${WIDTH}:${HEIGHT}:flags=bicubic,format=yuv420p[sky]`,
     `color=c=black@0:s=320x180:r=15,format=gbrap,geq=r=255:g=228:b=200:a='${light}',scale=${WIDTH}:${HEIGHT}:flags=bicubic[light]`,
     "[sky][light]overlay,format=yuv420p[v]",
     "anullsrc=r=48000:cl=mono[a]",
@@ -124,11 +125,11 @@ interface Quality {
   params?: string;
 }
 
-// Text stays sharp on still slides. Smooth gradients get more bits, and adaptive
-// quantization that favors dark areas, so that they do not band.
+// Text stays sharp on still slides. Smooth gradients get adaptive quantization that
+// favors dark areas, so that they do not band.
 const STILL: Quality = { crf: 22, tune: "stillimage" };
 const SCREEN: Quality = { crf: 23 };
-const LOOP: Quality = { crf: 20, params: "aq-mode=3" };
+const LOOP: Quality = { crf: 23, params: "aq-mode=3" };
 
 function ffmpeg(args: string[]): void {
   const result = spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { stdio: "inherit" });
