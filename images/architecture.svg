@@ -52,9 +52,10 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 <text x="870" y="274" font-size="12" fill="#3c4f69" text-anchor="middle">pictures, and</text>
 <text x="870" y="290" font-size="12" fill="#3c4f69" text-anchor="middle">attachments</text>
 <g transform="translate(806 322) scale(0.6667)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></g>
-<text x="828" y="334" font-size="12" fill="#667691">signed with an access</text>
-<text x="828" y="350" font-size="12" fill="#667691">key, a secret of</text>
-<text x="828" y="366" font-size="12" fill="#667691">the Worker</text>
+<text x="828" y="334" font-size="12" fill="#667691">signed with an</text>
+<text x="828" y="350" font-size="12" fill="#667691">access key, a</text>
+<text x="828" y="366" font-size="12" fill="#667691">secret of the</text>
+<text x="828" y="382" font-size="12" fill="#667691">Worker</text>
 <path d="M192 206 H236" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
 <path d="M418 206 H446" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
 <path d="M600 298 V352" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -62,8 +63,8 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 <text x="744" y="242" font-size="12" fill="#667691">signed</text>
 <path d="M466 284 H329 V256" fill="none" stroke="#667691" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
 <text x="240" y="302" font-size="12" fill="#667691">the keys and who signed in</text>
-<path d="M112 262 V492 H870 V310" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
-<text x="244" y="486" font-size="12" fill="#3c4f69">presigned URLs: the browser uploads, plays, and reads the files directly</text>
+<path d="M112 262 V492 H928 V310" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="316" y="486" font-size="12" fill="#3c4f69">presigned URLs: the browser uploads, plays, and reads the files directly</text>
 <rect x="32" y="548" width="222" height="62" rx="8" fill="#ffffff" stroke="#d4dee9" />
 <g transform="translate(46 560) scale(0.8333)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z"/><path d="M20.054 15.987H3.946"/></g>
 <text x="74" y="575" font-size="14" fill="#1a2c44" font-weight="600">Your machine</text>
