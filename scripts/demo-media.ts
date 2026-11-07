@@ -88,7 +88,7 @@ function bullets(x: number, y: number, widths: readonly number[], theme: Theme, 
 /**
  * A person from the shoulders up, in front of a soft background, as a webcam shows them.
  * The head sways a little, as people do on camera. ffmpeg draws it pixel by pixel, so the
- * picture is small and is scaled up, which also softens it like a webcam.
+ * picture is small and is scaled up, and a slight blur softens its edges like a webcam.
  */
 function face(person: Person, width: number, height: number, phase: number): string {
   const colors = FACES[person];
@@ -102,7 +102,7 @@ function face(person: Person, width: number, height: number, phase: number): str
     const top = value(colors.top);
     return `if(${head},if(${hair},${value(colors.hair)},${value(colors.skin)}),if(${body},${value(colors.shirt)},${top}+(${value(colors.bottom) - top})*Y/H))`;
   };
-  return `color=c=black:s=${width}x${height}:r=15,format=gbrp,geq=r='${channel(0)}':g='${channel(2)}':b='${channel(4)}'`;
+  return `color=c=black:s=${width}x${height}:r=15,format=gbrp,geq=r='${channel(0)}':g='${channel(2)}':b='${channel(4)}',gblur=sigma=0.7`;
 }
 
 /** A camera in the corner of slides, with a white edge. */
@@ -339,12 +339,13 @@ const VIDEOS: Record<VideoFile, SampleVideo> = {
       COURSE,
     ),
   },
+  // The zoom starts from the whole set, in black, which the poster shows.
   mandelbrot: {
     seconds: 12,
-    posterAt: 10,
+    posterAt: 1.5,
     tone: 262,
     picture: lecture(
-      `mandelbrot=s=400x225:r=${RATE}:maxiter=1500:start_scale=3:end_scale=0.06:end_pts=${12 * RATE},scale=800:450:flags=bicubic`,
+      `mandelbrot=s=400x225:r=${RATE}:maxiter=1500:start_scale=3:end_scale=0.06:end_pts=${12 * RATE}:inner=black,scale=800:450:flags=bicubic`,
       "daniel",
       COURSE,
     ),
@@ -354,7 +355,8 @@ const VIDEOS: Record<VideoFile, SampleVideo> = {
     posterAt: 6,
     tone: 294,
     picture: lecture(
-      `gradients=s=800x450:r=${RATE}:c0=0x533afd:c1=0x06b6d4:c2=0xf59e0b:c3=0xec4899:n=4:speed=0.03:seed=3`,
+      // Four colors from corner to corner, turning slowly.
+      `gradients=s=800x450:r=${RATE}:c0=0x533afd:c1=0x06b6d4:c2=0xf59e0b:c3=0xec4899:n=4:x0=0:y0=0:x1=800:y1=450:speed=0.008`,
       "daniel",
       COURSE,
     ),
