@@ -50,6 +50,32 @@ export async function verifyAccessToken(
   }
 }
 
+export type IdentityFetcher = (teamDomain: string, token: string) => Promise<unknown>;
+
+/**
+ * Asks Access for the identity of the session behind a token. The token holds only part
+ * of the identity: the login method and the time of the sign-in are in the rest.
+ */
+export const fetchAccessIdentity: IdentityFetcher = async (teamDomain, token) => {
+  const response = await fetch(new URL("/cdn-cgi/access/get-identity", teamDomain), {
+    headers: { cookie: `CF_Authorization=${token}` },
+  });
+  if (!response.ok) throw new Error(`Cloudflare Access answered ${response.status} for the identity of the session.`);
+  return response.json();
+};
+
+/**
+ * Reads the login method and the time of the sign-in from an identity of Access, or
+ * returns null when either is missing. Access writes the time in seconds since 1970.
+ */
+export function readSignIn(identity: unknown): { method: string; signedInAt: string } | null {
+  if (typeof identity !== "object" || identity === null) return null;
+  const { idp, iat } = identity as { idp?: unknown; iat?: unknown };
+  const method = typeof idp === "object" && idp !== null ? (idp as { type?: unknown }).type : undefined;
+  if (typeof method !== "string" || method === "" || typeof iat !== "number" || !Number.isFinite(iat)) return null;
+  return { method, signedInAt: new Date(iat * 1000).toISOString() };
+}
+
 /** True for requests to this machine, the only place where local development mode answers. */
 export function isLocalhost(url: URL): boolean {
   return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]";

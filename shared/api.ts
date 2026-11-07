@@ -41,6 +41,19 @@ export interface MeResponse {
   me: Me;
 }
 
+/** How the signed-in person signed in, as Cloudflare Access reports it. */
+export interface SignIn {
+  /** The type of the login method, such as passkeys, onetimepin, or github. */
+  method: string;
+  /** When the person signed in. */
+  signedInAt: string;
+}
+
+export interface SignInResponse {
+  /** null when nobody signs in through Access, as under `cf dev`. */
+  signIn: SignIn | null;
+}
+
 export interface UpdateMeRequest {
   displayName?: string;
   bio?: string;

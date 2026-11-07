@@ -17,13 +17,14 @@ import type {
   SearchResponse,
   StartAttachmentResponse,
   SeriesResponse,
+  SignInResponse,
   ThumbnailUploadResponse,
   UserResponse,
   VideoResponse,
 } from "../shared/api.ts";
 import { S3ObjectStore } from "../worker/storage.ts";
-import { ADMIN_EMAIL, VIEWER_EMAIL } from "./support/access.ts";
-import { createTestApp, json, type TestApp } from "./support/app.ts";
+import { ADMIN_EMAIL, TEAM_DOMAIN, VIEWER_EMAIL } from "./support/access.ts";
+import { createTestApp, json, SIGNED_IN_IDENTITY, type TestApp } from "./support/app.ts";
 
 const MIB = 1024 * 1024;
 
@@ -347,6 +348,53 @@ describe("local R2 bucket of cf dev", () => {
     const response = await app.signedRequest("/api/videos");
     expect(response.status).toBe(500);
     expect((await body<ApiErrorBody>(response)).error.code).toBe("misconfigured");
+  });
+});
+
+describe("sign-in", () => {
+  it("tells how and when the person signed in, from the identity of the session at Access", async () => {
+    const asked: { teamDomain: string; token: string }[] = [];
+    const app = await createTestApp({
+      fetchIdentity: async (teamDomain, token) => {
+        asked.push({ teamDomain, token });
+        return SIGNED_IN_IDENTITY;
+      },
+    });
+    const token = await app.access.sign({ email: VIEWER_EMAIL });
+    const response = await app.request("/api/me/sign-in", { headers: { "cf-access-jwt-assertion": token } });
+    expect(response.status).toBe(200);
+    expect(await body<SignInResponse>(response)).toEqual({ signIn: { method: "passkeys", signedInAt: "2026-11-07T05:42:45.000Z" } });
+    expect(asked).toEqual([{ teamDomain: TEAM_DOMAIN, token }]);
+  });
+
+  it("answers 502 when Access does not tell the login method", async () => {
+    const app = await createTestApp({ fetchIdentity: async () => ({ email: VIEWER_EMAIL, iat: 1_794_030_165 }) });
+    const response = await app.signedRequest("/api/me/sign-in");
+    expect(response.status).toBe(502);
+    expect((await body<ApiErrorBody>(response)).error.code).toBe("access_error");
+  });
+
+  it("answers 502 when Access cannot be reached", async () => {
+    const app = await createTestApp({
+      fetchIdentity: async () => {
+        throw new Error("Cloudflare Access answered 503 for the identity of the session.");
+      },
+    });
+    const response = await app.signedRequest("/api/me/sign-in");
+    expect(response.status).toBe(502);
+    expect((await body<ApiErrorBody>(response)).error.message).toContain("Cloudflare Access answered 503");
+  });
+
+  it("has no sign-in in local development mode, where Access does not run", async () => {
+    const app = await createTestApp({
+      env: { AUTH_MODE: "local-development", LOCAL_USER_EMAIL: "dev@example.com" },
+      fetchIdentity: async () => {
+        throw new Error("Local development mode must not ask Access.");
+      },
+    });
+    const response = await app.request("/api/me/sign-in");
+    expect(response.status).toBe(200);
+    expect(await body<SignInResponse>(response)).toEqual({ signIn: null });
   });
 });
 

@@ -1,18 +1,39 @@
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Cropper from "react-easy-crop";
-import { BIO_MAX_LENGTH, DISPLAY_NAME_MAX_LENGTH } from "../../shared/api.ts";
+import { BIO_MAX_LENGTH, DISPLAY_NAME_MAX_LENGTH, type SignIn } from "../../shared/api.ts";
 import { api } from "../api.ts";
 import { Avatar } from "../components/Avatar.tsx";
-import { PageHeader } from "../components/Page.tsx";
+import { DetailList, PageHeader, Section } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog.tsx";
 import { Input, Label, Textarea } from "../components/ui/field.tsx";
+import { Skeleton } from "../components/ui/skeleton.tsx";
 import { Slider } from "../components/ui/slider.tsx";
+import { formatDateTime } from "../lib/format.ts";
 import { cropToJpeg, type CropArea } from "../lib/image.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { useSession } from "../session.tsx";
+
+/** The names of the login methods of Cloudflare Access, by the type that Access reports. */
+const LOGIN_METHOD_NAMES: Record<string, string> = {
+  passkeys: "Passkey",
+  onetimepin: "One-time PIN",
+  github: "GitHub",
+  google: "Google",
+  "google-apps": "Google Workspace",
+  azureAD: "Microsoft Entra ID",
+  okta: "Okta",
+  onelogin: "OneLogin",
+  pingone: "PingOne",
+  centrify: "Centrify",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  yandex: "Yandex",
+  oidc: "OpenID Connect",
+  saml: "SAML",
+};
 
 /** What happens to the picture when the person saves. */
 type PictureChange = { kind: "keep" } | { kind: "replace"; image: Blob; preview: string } | { kind: "remove" };
@@ -28,7 +49,25 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  // How the person signed in: undefined while it loads, and null under cf dev, where Access does not run.
+  const [signIn, setSignIn] = useState<SignIn | null | undefined>(undefined);
+  const [signInError, setSignInError] = useState<unknown>(null);
   usePageTitle("Profile settings");
+
+  useEffect(() => {
+    let current = true;
+    api.getSignIn().then(
+      (response) => {
+        if (current) setSignIn(response.signIn);
+      },
+      (err: unknown) => {
+        if (current) setSignInError(err);
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, []);
 
   // The preview is a URL of the image in memory. It is freed when the person picks another picture or leaves.
   useEffect(() => {
@@ -126,10 +165,6 @@ export function SettingsPage() {
             }}
           />
         </div>
-        <div className="grid gap-1.5">
-          <span className="text-sm font-semibold text-strong">Email</span>
-          <p className="text-sm text-label">{me.email}</p>
-        </div>
         {error && <p className="error-box">{error}</p>}
         <div className="flex items-center gap-3">
           <Button variant="primary" onClick={() => void save()} disabled={saving || !changed || displayName.trim() === ""}>
@@ -137,6 +172,25 @@ export function SettingsPage() {
           </Button>
           {saved && !changed && <span className="text-sm text-positive">Saved.</span>}
         </div>
+        <Section title="Sign-in">
+          <DetailList
+            items={[
+              { label: "Email", value: me.email },
+              ...(signIn === undefined && signInError === null
+                ? [
+                    { label: "Login method", value: <Skeleton className="h-5 w-24" /> },
+                    { label: "Signed in", value: <Skeleton className="h-5 w-36" /> },
+                  ]
+                : signIn
+                  ? [
+                      { label: "Login method", value: LOGIN_METHOD_NAMES[signIn.method] ?? signIn.method },
+                      { label: "Signed in", value: formatDateTime(signIn.signedInAt) },
+                    ]
+                  : []),
+            ]}
+          />
+          {signInError !== null && <p className="error-box">{signInError instanceof Error ? signInError.message : String(signInError)}</p>}
+        </Section>
       </div>
       <PictureCropper
         image={cropping}

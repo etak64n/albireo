@@ -361,6 +361,10 @@ The profile settings (`/settings`) change the picture, the display name, and the
 - You move and zoom the picture to choose a circle. The browser turns it into a JPEG of 256 by 256 pixels (src/lib/image.ts).
 - Removing the picture brings back the default person icon. The file stays in the bucket.
 
+Under Sign-in, the profile settings show the email that you signed in with, the login method of the session, such as a passkey, and the time of the sign-in.
+The token that Access adds to each request leaves out the login method, so the Worker asks Access for the identity of the session (`/cdn-cgi/access/get-identity` on the team domain).
+Under `cf dev`, where Access does not run, the section shows the email alone.
+
 Each person has a page (`/users/<ID>`) with their picture, name, bio, series, and videos (src/pages/UserPage.tsx).
 The menu under your picture in the header links to your page, to the profile settings, and, with Access, to logging out.
 

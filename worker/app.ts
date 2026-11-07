@@ -44,6 +44,7 @@ import {
   type SeriesDetail,
   type SeriesResponse,
   type SeriesSummary,
+  type SignInResponse,
   type ThumbnailUploadResponse,
   type UserProfile,
   type UserResponse,
@@ -56,7 +57,7 @@ import {
   type VideoSummary,
   type WatchedVideo,
 } from "../shared/api.ts";
-import { AccessDeniedError, isLocalhost, verifyAccessToken } from "./access.ts";
+import { AccessDeniedError, isLocalhost, readSignIn, verifyAccessToken, type IdentityFetcher } from "./access.ts";
 import { AttachmentRepository, contentTypeOf, downloadDisposition, type AttachmentRecord } from "./attachments.ts";
 import { CommentRepository, type CommentRecord } from "./comments.ts";
 import type { D1Database, Env } from "./env.ts";
@@ -90,6 +91,8 @@ export type IdKind = "video" | "user" | "series" | "comment" | "attachment";
 export interface AppDependencies {
   /** Signing keys of the Access team that protects the deployment. */
   keySetFor: (teamDomain: string) => JWTVerifyGetKey;
+  /** Asks Access for the full identity of the session behind a token. */
+  fetchIdentity: IdentityFetcher;
   objectStoreFor: (config: RuntimeConfig) => ObjectStore;
   now: () => Date;
   /** Returns a new ID for a video, a user, a series, a comment, or an attachment. */
@@ -176,6 +179,25 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
   });
 
   // The picture of a person: the browser uploads a JPEG to the signed URL, then commits it.
+  // How and when the person signed in, for their profile settings. The token holds
+  // neither, so the Worker asks Access for the identity of the session.
+  app.get("/api/me/sign-in", async (c) => {
+    const config = c.get("config");
+    if (config.authMode === "local-development" || config.access === null) return c.json<SignInResponse>({ signIn: null });
+    let identity: unknown;
+    try {
+      identity = await deps.fetchIdentity(config.access.teamDomain, c.req.header("cf-access-jwt-assertion") ?? "");
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new HttpError(502, "access_error", `albireo could not read the identity of the session from Cloudflare Access: ${reason}`);
+    }
+    const signIn = readSignIn(identity);
+    if (signIn === null) {
+      throw new HttpError(502, "access_error", "Cloudflare Access answered an identity without the login method or the time of the sign-in.");
+    }
+    return c.json<SignInResponse>({ signIn });
+  });
+
   app.post("/api/me/avatar", async (c) => {
     const url = await store(c.get("config")).presignPut(avatarKey(c.get("viewer").id), THUMBNAIL_CONTENT_TYPE);
     return c.json<ImageUploadResponse>({ url, contentType: THUMBNAIL_CONTENT_TYPE });

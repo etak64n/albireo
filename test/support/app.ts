@@ -22,7 +22,12 @@ export interface TestAppOptions {
   env?: Partial<Env>;
   /** Storage that the app uses. The default is a MemoryObjectStore. */
   objectStoreFor?: AppDependencies["objectStoreFor"];
+  /** Answers for the identity of a session. The default is SIGNED_IN_IDENTITY. */
+  fetchIdentity?: AppDependencies["fetchIdentity"];
 }
+
+/** The identity that Access reports by default: a sign-in with a passkey at 2026-11-07T05:42:45Z. */
+export const SIGNED_IN_IDENTITY = { idp: { id: "idp-passkeys", type: "passkeys" }, iat: 1_794_030_165 };
 
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
   const access = await createAccessKeys();
@@ -31,6 +36,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
   const counters = new Map<IdKind, number>();
   const app = createApp({
     keySetFor: () => access.keySet,
+    fetchIdentity: options.fetchIdentity ?? (async () => SIGNED_IN_IDENTITY),
     objectStoreFor: options.objectStoreFor ?? (() => store),
     // Each call is one second later, so creation order is unambiguous.
     now: () => {

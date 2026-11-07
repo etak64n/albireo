@@ -15,6 +15,14 @@ export function formatDate(date: string): string {
   return `${value.getFullYear()}/${month}/${day}`;
 }
 
+/** A date and a time as YYYY/MM/DD HH:MM in the time zone of the browser. */
+export function formatDateTime(date: string): string {
+  const value = new Date(date);
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+  return `${formatDate(date)} ${hours}:${minutes}`;
+}
+
 export function formatBytes(bytes: number): string {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = bytes;
