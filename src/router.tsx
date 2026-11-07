@@ -17,6 +17,12 @@ export type Route =
 
 const PAGES = { videos: "video", series: "series", users: "user" } as const;
 
+/**
+ * Where the app lives: "" on its own domain, and "/albireo" for the demo on GitHub Pages,
+ * which serves a project under its name. Paths in the app leave it out.
+ */
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export function matchRoute(pathname: string): Route {
   if (pathname === "/") return { name: "home" };
   if (pathname === "/videos") return { name: "all-videos" };
@@ -33,7 +39,7 @@ export function matchRoute(pathname: string): Route {
 
 /** Opens a page. The state travels with the history entry, such as a request to start playing. */
 export function navigate(to: string, state: unknown = null): void {
-  window.history.pushState(state, "", to);
+  window.history.pushState(state, "", BASE + to);
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.scrollTo(0, 0);
 }
@@ -43,9 +49,9 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener("popstate", onChange);
 }
 
-/** The path of the page that is open, such as /series/abc. */
+/** The path of the page that is open, such as /series/abc, without the base of the app. */
 export function usePathname(): string {
-  return useSyncExternalStore(subscribe, () => window.location.pathname);
+  return useSyncExternalStore(subscribe, () => window.location.pathname.slice(BASE.length) || "/");
 }
 
 /** The query string of the page that is open, such as ?q=sync. */
@@ -79,7 +85,7 @@ export function Link({
     navigate(to);
   }
   return (
-    <a href={to} onClick={handleClick} className={className} role={role} aria-current={current ? "page" : undefined}>
+    <a href={BASE + to} onClick={handleClick} className={className} role={role} aria-current={current ? "page" : undefined}>
       {children}
     </a>
   );
