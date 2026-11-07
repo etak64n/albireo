@@ -5,10 +5,14 @@ import { AUD, createAccessKeys, TEAM_DOMAIN } from "./support/access.ts";
 const access = { teamDomain: TEAM_DOMAIN, aud: AUD };
 
 describe("verifyAccessToken", () => {
-  it("accepts a token that the team signed for the application", async () => {
+  it("accepts a token that the team signed for the application, with its times", async () => {
     const keys = await createAccessKeys();
-    await expect(verifyAccessToken(await keys.sign(), access, keys.keySet)).resolves.toEqual({
+    const issued = Math.floor(Date.now() / 1000) - 60;
+    const token = await keys.sign({ issuedAt: issued, expiresAt: issued + 3600 });
+    await expect(verifyAccessToken(token, access, keys.keySet)).resolves.toEqual({
       email: "viewer@example.com",
+      issuedAt: new Date(issued * 1000).toISOString(),
+      expiresAt: new Date((issued + 3600) * 1000).toISOString(),
     });
   });
 
