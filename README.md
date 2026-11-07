@@ -40,6 +40,7 @@ This README explains what albireo does, how it works, how to run it on your mach
     - [Development storage](#development-storage)
     - [Local data](#local-data)
     - [Checks](#checks)
+  - [Releases](#releases)
   - [Configuration reference](#configuration-reference)
     - [Example](#example)
     - [Settings](#settings)
@@ -562,8 +563,23 @@ Deploy with `pnpm stack:deploy`, not with `cf deploy` alone: a production build 
 
 ### Update a deployment
 
-To deploy a new version, run `pnpm stack:deploy` again.
-It applies the new files in migrations/ before the new code goes live, and it updates the Access policy to `production.access.allow`.
+Each version of albireo is a release with a tag such as v0.2.0 ([Releases](#releases)).
+Before you update, read the notes of every release after the one you run: they say what a deployment must change, such as the settings.
+Then check out the tag of the new release, and deploy the stack again.
+
+```bash
+# Fetch the tags of new releases, and switch to the release to deploy
+git fetch --tags
+git checkout v0.2.0
+
+# Install the dependency versions of that release
+pnpm install --frozen-lockfile
+
+# Apply the new migrations, then deploy the new code
+pnpm stack:deploy
+```
+
+`pnpm stack:deploy` applies the new files in migrations/ before the new code goes live, and it updates the Access policy to `production.access.allow`.
 
 ### Delete a deployment
 
@@ -683,8 +699,28 @@ pnpm test
 
 The tests apply the real migrations to node:sqlite, the search index included, because the SQLite in Node.js has FTS5 (test/support/d1.ts).
 
-CI runs on pushes to main and on pull requests (.github/workflows/ci.yml).
+CI runs on pushes to main, on pull requests, and on each release (.github/workflows/ci.yml).
 It copies the example settings, then runs the type checks, the tests, and `cf build` on Node.js 24.
+
+## Releases
+
+The version of albireo is `version` in package.json, and each release is a tag with that version, such as v0.2.0.
+The notes of a release say what changed and what a deployment must change.
+Until version 1.0.0, a minor version, such as 0.2.0, may need changes to the settings or the deployment, and a patch version, such as 0.2.1, needs none.
+
+To publish a version, set `version` in package.json, commit, and push an annotated tag whose message holds the notes of the release.
+
+```bash
+# Tag the commit that sets "version" to 0.2.0, with the notes of the release in notes.md.
+# --cleanup=verbatim keeps every line: by default, git drops lines that start with #.
+git tag -a v0.2.0 -F notes.md --cleanup=verbatim
+
+# Push the commit and the tag
+git push origin main v0.2.0
+```
+
+The tag starts the Release workflow (.github/workflows/release.yml).
+It runs the checks of CI, stops if the tag has no message or names another version than package.json, and publishes the release with the message of the tag as its notes.
 
 ## Configuration reference
 
