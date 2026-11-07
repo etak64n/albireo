@@ -22,6 +22,8 @@
   · <a href="https://github.com/etak64n/albireo/issues">Issues</a>
 </p>
 
+[![A tour of albireo, with the sample videos of the demo](images/tour.gif)](https://etak64n.github.io/albireo/)
+
 The people you allow sign in with Cloudflare Access, then upload, watch, rate, and comment on videos, and attach files such as slides to them. Videos and attached files stay in your S3-compatible bucket as you uploaded them, and the browser sends and reads them directly, so their bytes never pass through the Worker. Each person chooses English or Japanese as the language of the app.
 
 ## Architecture
