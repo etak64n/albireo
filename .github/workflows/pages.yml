@@ -60,6 +60,28 @@ jobs:
       - name: Make the sample media
         run: node scripts/demo-media.ts demo-dist "$RUNNER_TEMP/playwright"
 
+      # The poster and two frames of each video, and the pictures of the people, kept with the
+      # run apart from the site, to look at them without playing the videos.
+      - name: Keep frames of the sample videos
+        run: |
+          mkdir -p sample-frames
+          for video in demo-dist/media/videos/*.mp4; do
+            name=$(basename "$video" .mp4)
+            length=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
+            cp "demo-dist/media/posters/$name.jpg" "sample-frames/$name-poster.jpg"
+            for share in 33 66; do
+              ffmpeg -nostdin -loglevel error -y -ss "$(awk "BEGIN { print $length * $share / 100 }")" -i "$video" \
+                -frames:v 1 -update 1 -q:v 3 "sample-frames/$name-$share.jpg"
+            done
+          done
+          cp demo-dist/media/people/*.jpg sample-frames/
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: sample-frames
+          path: sample-frames
+          if-no-files-found: error
+
       # The documentation site has its own dependencies and its base at /<repository>/docs.
       - name: Build the documentation
         run: |
