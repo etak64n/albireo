@@ -71,7 +71,9 @@ export default defineConfig(({ mode }) => {
         ...(isDevelopment
           ? {}
           : {
-            ACCESS_TEAM_DOMAIN: bindings.text(settings.production.access.teamDomain),
+            // The team domain of the Zero Trust organization of the account, which
+            // `pnpm stack:deploy` reads from Cloudflare.
+            ACCESS_TEAM_DOMAIN: bindings.secret(),
             // The AUD tag of the Access application that `pnpm stack:deploy` creates for the domain.
             ACCESS_AUD: bindings.secret(),
           }),

@@ -94,8 +94,25 @@ describe("validateSettings", () => {
   });
 
   it("drops a trailing slash from an origin", () => {
-    const settings = validateSettings(settingsWith({ "production.access.teamDomain": "https://example.cloudflareaccess.com/" }));
-    expect(settings.production.access.teamDomain).toBe("https://example.cloudflareaccess.com");
+    const settings = validateSettings(settingsWith({ "production.storage.endpoint": "https://s3.example.com/" }));
+    expect(settings.production.storage).toMatchObject({ endpoint: "https://s3.example.com" });
+  });
+
+  it("reads no team domain, which pnpm stack:deploy takes from the Zero Trust organization", () => {
+    expect(problemsOf(settingsWith({ "production.access.teamDomain": "https://example.cloudflareaccess.com" }))).toEqual([
+      "production.access.teamDomain is not a setting that albireo reads.",
+    ]);
+  });
+
+  it("offers every login method of the organization for all, or the listed ones", () => {
+    expect(validateSettings(exampleSettings).production.access.loginMethods).toBe("all");
+    expect(validateSettings(settingsWith({ "production.access.loginMethods": ["passkeys", "onetimepin"] })).production.access.loginMethods).toEqual([
+      "passkeys",
+      "onetimepin",
+    ]);
+    expect(problemsOf(settingsWith({ "production.access.loginMethods": "every" }))).toEqual([
+      'production.access.loginMethods must be "all" or a list of login method types or IDs, such as ["onetimepin"].',
+    ]);
   });
 
   it("lets every admin sign in through Access", () => {
@@ -124,7 +141,7 @@ describe("validateSettings", () => {
 
   it("names login methods by a type or an ID without spaces", () => {
     expect(problemsOf(settingsWith({ "production.access.loginMethods": ["one-time pin"] }))).toEqual([
-      'production.access.loginMethods must be a list of login method types or IDs, such as "onetimepin".',
+      'production.access.loginMethods must be "all" or a list of login method types or IDs, such as ["onetimepin"].',
     ]);
   });
 

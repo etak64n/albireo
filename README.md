@@ -47,7 +47,7 @@ To try albireo on your machine without a Cloudflare account or a bucket, see [Tr
 | Requirement | Details |
 | --- | --- |
 | **Cloudflare account** | Holds the zone of your domain. |
-| **Zero Trust organization** | In that Cloudflare account; provides the team domain of Cloudflare Access. |
+| **Zero Trust organization** | In that Cloudflare account; runs the sign-in of Cloudflare Access. |
 | **S3-compatible bucket** | Supports Signature Version 4 presigned URLs, multipart uploads, and CORS. |
 | **Access key** | Has permission to read and write objects in that bucket only. |
 | **Node.js** | 22.23+, 24.22+, or 26.12+. |
@@ -117,15 +117,14 @@ export default defineAlbireoConfig({
       bucket: "albireo-videos",
       urlStyle: "path",
     },
-    // Cloudflare Access, which lets only these people open albireo
+    // Cloudflare Access, which lets only these people open albireo. pnpm stack:deploy
+    // reads the team domain from the Zero Trust organization of the account.
     access: {
-      // The team domain of your Zero Trust organization
-      teamDomain: "https://example.cloudflareaccess.com",
       // The emails that may sign in. They include every admin.
       allow: ["admin@example.com"],
-      // The login methods of your Zero Trust organization that the sign-in page offers,
-      // by type, such as "onetimepin", "github", or "passkeys"
-      loginMethods: ["onetimepin"],
+      // The login methods that the sign-in page offers: "all" for every login method of your
+      // Zero Trust organization, or a list of their types, such as ["passkeys", "onetimepin"]
+      loginMethods: "all",
     },
   },
   // `cf dev` serves albireo on localhost without Cloudflare Access.

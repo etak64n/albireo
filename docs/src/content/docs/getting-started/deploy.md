@@ -10,7 +10,7 @@ This page deploys albireo to your own domain. It lists what you need first, then
 You need four things.
 
 1. A Cloudflare account that also holds the zone of your domain (config/settings.ts, `production.domain`)
-2. A Zero Trust organization in that account, which gives you the team domain of Cloudflare Access
+2. A Zero Trust organization in that account, which runs the sign-in of Cloudflare Access. `pnpm stack:deploy` reads its team domain.
 3. An S3-compatible bucket that supports Signature Version 4 presigned URLs, multipart uploads, and CORS
 4. An access key for that bucket
 
@@ -62,8 +62,8 @@ cp albireo.config.example.ts albireo.config.ts
 ```
 
 In `production.access.allow`, write the emails of the people who may sign in, every admin included: Access lets in only these people.
-In `production.access.loginMethods`, write the login methods that the sign-in page offers, by type, such as `onetimepin`.
-Zero Trust > Integrations > Identity providers in the Cloudflare dashboard lists the login methods of your organization, and `pnpm stack:deploy` stops if the organization lacks one of them.
+In `production.access.loginMethods`, write `"all"` to offer every login method of your organization on the sign-in page, or a list of the ones to offer, by type, such as `"passkeys"`.
+Zero Trust > Integrations > Identity providers in the Cloudflare dashboard lists the login methods of your organization, and `pnpm stack:deploy` stops if the list names one that the organization lacks.
 [Configuration](../../settings/configuration/) describes every setting.
 
 Step 3: set CORS on the bucket with the rules in examples/bucket-cors.json.
