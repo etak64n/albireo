@@ -60,7 +60,7 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 <path d="M418 206 H446" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
 <path d="M600 298 V352" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
 <path d="M734 250 H796" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
-<text x="744" y="242" font-size="12" fill="#667691">signed</text>
+<text x="756" y="242" font-size="12" fill="#667691">signed</text>
 <path d="M466 284 H329 V256" fill="none" stroke="#667691" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
 <text x="240" y="302" font-size="12" fill="#667691">the keys and who signed in</text>
 <path d="M112 262 V492 H928 V310" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
