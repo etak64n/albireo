@@ -1,8 +1,9 @@
 # Publishes the GitHub Pages site of albireo on every push to main. The demo takes the
 # root of the site: the browser app with sample data in place of the API
 # (vite.demo.config.ts, src/demo/), and the sample videos, pictures, and attachments that
-# scripts/demo-media.ts makes with ffmpeg. Each part of the site goes into a folder of
-# demo-dist, which becomes the site.
+# scripts/demo-media.ts makes with ffmpeg. The documentation site (docs/, built with
+# Starlight) takes /docs/. Each part of the site goes into a folder of demo-dist, which
+# becomes the site.
 name: Pages
 
 on:
@@ -32,6 +33,9 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            docs/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
 
@@ -46,6 +50,13 @@ jobs:
       # Short videos with their posters, the pictures of the people, and the attachments, under demo-dist/media.
       - name: Make the sample media
         run: node scripts/demo-media.ts demo-dist
+
+      # The documentation site has its own dependencies and its base at /<repository>/docs.
+      - name: Build the documentation
+        run: |
+          pnpm --dir docs install --frozen-lockfile
+          pnpm --dir docs exec astro build
+          cp -R docs/dist demo-dist/docs
 
       # Pages answers an unknown path with 404.html, so every page of the app opens from its URL.
       - run: cp demo-dist/index.html demo-dist/404.html
