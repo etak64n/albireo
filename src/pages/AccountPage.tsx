@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
-import type { Passkey, Session, SignIn } from "../../shared/api.ts";
+import { isLanguage, LANGUAGES, type Language, type Passkey, type Session, type SignIn } from "../../shared/api.ts";
 import { api } from "../api.ts";
 import { DetailTable, PageHeader, Section } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
+import { LANGUAGE_NAMES, useLanguage, useT, type Messages } from "../i18n.ts";
 import { formatDate, formatDateTime } from "../lib/format.ts";
 import { usePageTitle } from "../lib/title.ts";
 import { logOut, useSession } from "../session.tsx";
 
-/** The names of the login methods of Cloudflare Access, by the type that Access reports. */
-const LOGIN_METHOD_NAMES: Record<string, string> = {
-  passkeys: "Passkey",
-  onetimepin: "One-time PIN",
+/** The names of the login methods of Cloudflare Access that are products, by the type that Access reports. */
+const PRODUCT_LOGIN_METHODS: Record<string, string> = {
   github: "GitHub",
   google: "Google",
   "google-apps": "Google Workspace",
@@ -27,6 +26,13 @@ const LOGIN_METHOD_NAMES: Record<string, string> = {
   oidc: "OpenID Connect",
   saml: "SAML",
 };
+
+/** The name of a login method: passkeys and one-time PINs in the language of the app, and the rest by their product. */
+function loginMethodName(method: string, t: Messages): string {
+  if (method === "passkeys") return t.account.passkey;
+  if (method === "onetimepin") return t.account.oneTimePin;
+  return PRODUCT_LOGIN_METHODS[method] ?? method;
+}
 
 // The head and the cells of the tables of passkeys and sessions, as in the table of a series.
 const HEAD = "h-9 px-2 text-left align-middle text-xs font-semibold whitespace-nowrap text-label";
@@ -60,28 +66,31 @@ const loadSessions = async () => (await api.getSessions()).sessions;
 
 /**
  * What only the signed-in person sees about themselves, laid out like the settings of
- * Stripe: their details, how and when they signed in, their passkeys, and their sessions.
+ * Stripe: their details, their language, how and when they signed in, their passkeys,
+ * and their sessions.
  */
 export function AccountPage() {
   const { me } = useSession();
+  const t = useT();
   const signIn = useLoaded(loadSignIn);
   const sessions = useLoaded(loadSessions);
-  usePageTitle("Account");
+  usePageTitle(t.common.account);
 
   return (
     <Shell>
-      <PageHeader title="Account" />
+      <PageHeader title={t.common.account} />
       <div className="grid w-full max-w-[760px] gap-12">
-        <Section title="Details">
+        <Section title={t.account.details}>
           <DetailTable
             items={[
-              { label: "Email", value: me.email },
+              { label: t.account.email, value: me.email },
               // Admins edit every video and every series, and everyone else edits their own.
-              { label: "Role", value: me.isAdmin ? "Admin" : "Member" },
-              { label: "Joined", value: formatDate(me.joinedAt) },
+              { label: t.account.role, value: me.isAdmin ? t.account.admin : t.account.member },
+              { label: t.account.joined, value: formatDate(me.joinedAt) },
             ]}
           />
         </Section>
+        <PreferencesSection />
         <SignInSection signIn={signIn} />
         {signIn.state === "loaded" && signIn.value !== null && signIn.value.passkeys !== null && signIn.value.passkeys.length > 0 && (
           <PasskeysSection passkeys={signIn.value.passkeys} />
@@ -92,11 +101,63 @@ export function AccountPage() {
   );
 }
 
+/** The language of the app. A choice saves at once, and the whole app switches to it. */
+function PreferencesSection() {
+  const { me, setMe } = useSession();
+  const t = useT();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function choose(language: Language) {
+    setSaving(true);
+    setError("");
+    try {
+      setMe((await api.updateMe({ language })).me);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Section title={t.account.preferences}>
+      <DetailTable
+        items={[
+          {
+            label: t.account.language,
+            value: (
+              // The negative margins keep the row as high as the rows of text.
+              <select
+                value={me.language}
+                onChange={(event) => {
+                  if (isLanguage(event.target.value)) void choose(event.target.value);
+                }}
+                disabled={saving}
+                aria-label={t.account.language}
+                className="field -my-1 block w-auto"
+              >
+                {LANGUAGES.map((language) => (
+                  <option key={language} value={language} lang={language}>
+                    {LANGUAGE_NAMES[language]}
+                  </option>
+                ))}
+              </select>
+            ),
+          },
+        ]}
+      />
+      {error && <p className="error-box">{error}</p>}
+    </Section>
+  );
+}
+
 /** How and when the person signed in. Under cf dev, where Access does not run, the section is left out. */
 function SignInSection({ signIn }: { signIn: Loaded<SignIn | null> }) {
+  const t = useT();
   if (signIn.state === "failed") {
     return (
-      <Section title="Sign-in">
+      <Section title={t.account.signIn}>
         <ErrorBox error={signIn.error} />
       </Section>
     );
@@ -104,11 +165,11 @@ function SignInSection({ signIn }: { signIn: Loaded<SignIn | null> }) {
   if (signIn.state === "loaded" && signIn.value === null) return null;
   const value = signIn.state === "loaded" ? signIn.value : null;
   return (
-    <Section title="Sign-in">
+    <Section title={t.account.signIn}>
       <DetailTable
         items={[
-          { label: "Login method", value: value === null ? <Skeleton className="h-5 w-24" /> : (LOGIN_METHOD_NAMES[value.method] ?? value.method) },
-          { label: "Signed in", value: value === null ? <Skeleton className="h-5 w-36" /> : formatDateTime(value.signedInAt) },
+          { label: t.account.loginMethod, value: value === null ? <Skeleton className="h-5 w-24" /> : loginMethodName(value.method, t) },
+          { label: t.account.signedIn, value: value === null ? <Skeleton className="h-5 w-36" /> : formatDateTime(value.signedInAt) },
         ]}
       />
     </Section>
@@ -117,14 +178,15 @@ function SignInSection({ signIn }: { signIn: Loaded<SignIn | null> }) {
 
 /** The passkeys that the person registered with Access. */
 function PasskeysSection({ passkeys }: { passkeys: Passkey[] }) {
+  const t = useT();
   return (
-    <Section title="Passkeys">
+    <Section title={t.account.passkeys}>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border">
-            <th className={HEAD}>Name</th>
-            <th className={HEAD}>Added</th>
-            <th className={HEAD}>Last used</th>
+            <th className={HEAD}>{t.account.name}</th>
+            <th className={HEAD}>{t.account.added}</th>
+            <th className={HEAD}>{t.account.lastUsed}</th>
           </tr>
         </thead>
         <tbody>
@@ -146,11 +208,13 @@ function PasskeysSection({ passkeys }: { passkeys: Passkey[] }) {
  * the session of this device: Access keeps the others.
  */
 function SessionsSection({ sessions, logoutUrl }: { sessions: Loaded<Session[] | null>; logoutUrl: string | null }) {
+  const t = useT();
+  const language = useLanguage();
   if (sessions.state === "loaded" && sessions.value === null) return null;
   return (
     <Section
-      title="Sessions"
-      actions={logoutUrl !== null && <Button onClick={() => void logOut(logoutUrl)}>Log out of this device</Button>}
+      title={t.account.sessions}
+      actions={logoutUrl !== null && <Button onClick={() => void logOut(logoutUrl)}>{t.account.logOutOfThisDevice}</Button>}
     >
       {sessions.state === "failed" ? (
         <ErrorBox error={sessions.error} />
@@ -158,10 +222,10 @@ function SessionsSection({ sessions, logoutUrl }: { sessions: Loaded<Session[] |
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className={HEAD}>Device</th>
-              <th className={`${HEAD} max-sm:hidden`}>Location</th>
-              <th className={`${HEAD} max-md:hidden`}>Signed in</th>
-              <th className={HEAD}>Last active</th>
+              <th className={HEAD}>{t.account.device}</th>
+              <th className={`${HEAD} max-sm:hidden`}>{t.account.location}</th>
+              <th className={`${HEAD} max-md:hidden`}>{t.account.signedIn}</th>
+              <th className={HEAD}>{t.account.lastActive}</th>
             </tr>
           </thead>
           <tbody>
@@ -185,15 +249,15 @@ function SessionsSection({ sessions, logoutUrl }: { sessions: Loaded<Session[] |
                 <tr key={`${session.signedInAt} ${session.browser} ${session.os}`} className="border-b border-hairline">
                   <td className={CELL}>
                     <span className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-strong">{deviceName(session)}</span>
+                      <span className="font-semibold text-strong">{deviceName(session, t)}</span>
                       {session.current && (
                         <span className="rounded-xs border border-border bg-surface-subdued px-1.5 text-xs leading-[18px] text-label">
-                          This device
+                          {t.account.thisDevice}
                         </span>
                       )}
                     </span>
                   </td>
-                  <td className={`${CELL} text-strong max-sm:hidden`}>{placeName(session)}</td>
+                  <td className={`${CELL} text-strong max-sm:hidden`}>{placeName(session, t, language)}</td>
                   <td className={`${CELL} text-strong max-md:hidden`}>{formatDateTime(session.signedInAt)}</td>
                   <td className={`${CELL} text-strong`}>{formatDateTime(session.lastActiveAt)}</td>
                 </tr>
@@ -211,13 +275,13 @@ function ErrorBox({ error }: { error: unknown }) {
 }
 
 /** "Chrome on macOS", or as much of it as albireo knows. */
-function deviceName(session: Session): string {
-  if (session.browser !== "" && session.os !== "") return `${session.browser} on ${session.os}`;
-  return session.browser || session.os || "Unknown device";
+function deviceName(session: Session, t: Messages): string {
+  if (session.browser !== "" && session.os !== "") return t.account.deviceName(session.browser, session.os);
+  return session.browser || session.os || t.account.unknownDevice;
 }
 
-/** "Tokyo, Japan", or as much of it as Cloudflare told. */
-function placeName(session: Session): string {
-  const country = session.country === "" ? "" : (new Intl.DisplayNames(["en"], { type: "region" }).of(session.country) ?? session.country);
-  return [session.city, country].filter((part) => part !== "").join(", ") || "—";
+/** "Tokyo, Japan", or as much of it as Cloudflare told, with the country in the language of the app. */
+function placeName(session: Session, t: Messages, language: Language): string {
+  const country = session.country === "" ? "" : (new Intl.DisplayNames([language], { type: "region" }).of(session.country) ?? session.country);
+  return t.account.place(session.city, country) || "—";
 }
