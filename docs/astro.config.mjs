@@ -12,8 +12,8 @@ export default defineConfig({
     starlight({
       title: "albireo",
       description: "A private video library on Cloudflare Workers.",
-      logo: { src: "./src/assets/albireo-icon.png" },
-      favicon: "/favicon.png",
+      logo: { src: "./src/assets/albireo-icon.svg" },
+      favicon: "/favicon.svg",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/etak64n/albireo" }],
       editLink: { baseUrl: "https://github.com/etak64n/albireo/edit/main/docs/" },
       // The same groups as the documentation of deneb: getting started, guides, settings,
