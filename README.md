@@ -1,4 +1,9 @@
-<h1 align="center">albireo</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/albireo-wordmark-dark.png">
+    <img src="images/albireo-wordmark.png" alt="albireo" width="400">
+  </picture>
+</h1>
 
 <p align="center">albireo is a private video library built on Cloudflare Workers.</p>
 
