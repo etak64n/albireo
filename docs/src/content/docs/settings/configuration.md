@@ -51,15 +51,14 @@ export default defineAlbireoConfig({
       bucket: "albireo-videos",
       urlStyle: "path",
     },
-    // Cloudflare Access, which lets only these people open albireo
+    // Cloudflare Access, which lets only these people open albireo. pnpm stack:deploy
+    // reads the team domain from the Zero Trust organization of the account.
     access: {
-      // The team domain of your Zero Trust organization
-      teamDomain: "https://example.cloudflareaccess.com",
       // The emails that may sign in. They include every admin.
       allow: ["admin@example.com"],
-      // The login methods of your Zero Trust organization that the sign-in page offers,
-      // by type, such as "onetimepin", "github", or "passkeys"
-      loginMethods: ["onetimepin"],
+      // The login methods that the sign-in page offers: "all" for every login method of your
+      // Zero Trust organization, or a list of their types, such as ["passkeys", "onetimepin"]
+      loginMethods: "all",
     },
   },
   // `cf dev` serves albireo on localhost without Cloudflare Access.
@@ -119,15 +118,14 @@ Every setting is required, and a key that albireo does not read is an error, whi
 - `production.storage.urlStyle`
   - `"path"` puts the bucket name in the URL path.
   - `"virtual-hosted"` puts the bucket name in the hostname.
-- `production.access.teamDomain`
-  - The `https://` origin of your Access team domain
 - `production.access.allow`
   - The people who may sign in, by email. `pnpm stack:deploy` gives the domain an Access application whose only policy allows them.
   - A list of one or more lowercase email addresses, every admin included
 - `production.access.loginMethods`
-  - The login methods that the sign-in page offers. The Access application allows only these.
-  - A list of one or more login methods of your Zero Trust organization, each by its type, such as `"onetimepin"`, `"github"`, or `"passkeys"`. When the organization has more than one login method of a type, write the ID of the one to allow.
-  - `pnpm stack:deploy` looks them up in the organization, and stops before it changes anything if one of them does not exist. `pnpm exec cf zero-trust identity-providers list` lists the type and the ID of each login method.
+  - The login methods that the sign-in page offers
+  - `"all"` offers every login method of your Zero Trust organization, the ones that you add later included.
+  - A list offers only these, each by its type, such as `"onetimepin"`, `"github"`, or `"passkeys"`. When the organization has more than one login method of a type, write the ID of the one to allow.
+  - `pnpm stack:deploy` looks them up in the organization, prints the ones that the sign-in page offers, and stops before it changes anything if the list names one that does not exist. `pnpm exec cf zero-trust identity-providers list` lists the type and the ID of each login method.
 - `development.signInAs`
   - The person that `cf dev` signs in, because Access does not run on your machine
   - A lowercase email address
