@@ -12,8 +12,9 @@ const THEME_FILES = ["theme.css", "logo.svg"];
 
 // Builds the look of the library from the appearance settings. The browser app
 // imports virtual:albireo-appearance, which loads theme.css of the theme folder
-// and gives the site name and the URL of logo.svg.
-function albireoAppearance(appearance: AppearanceSettings): Plugin {
+// and gives the site name and the URL of logo.svg. The demo (vite.demo.config.ts)
+// builds its look with it too.
+export function albireoAppearance(appearance: AppearanceSettings): Plugin {
   const folder = resolve(appearance.theme);
   const missing = THEME_FILES.filter((file) => !existsSync(resolve(folder, file)));
   if (missing.length > 0) {

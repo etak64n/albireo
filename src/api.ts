@@ -48,6 +48,12 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, method: string, body?: unknown): Promise<T> {
+  // The demo on GitHub Pages answers from sample data in the browser. The production
+  // build drops this branch, and with it the module of the demo.
+  if (import.meta.env.MODE === "demo") {
+    const { demoResponse } = await import("./demo/api.ts");
+    return demoResponse(path, method, body) as T;
+  }
   let response: Response;
   try {
     response = await fetch(path, {
