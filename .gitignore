@@ -9,3 +9,6 @@ albireo.config.ts
 .env.*
 !.env.example
 .dev.vars*
+
+# Types that Astro generates for the documentation site
+.astro/
