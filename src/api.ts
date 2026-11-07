@@ -52,7 +52,7 @@ async function request<T>(path: string, method: string, body?: unknown): Promise
   // build drops this branch, and with it the module of the demo.
   if (import.meta.env.MODE === "demo") {
     const { demoResponse } = await import("./demo/api.ts");
-    return demoResponse(path, method, body) as T;
+    return (await demoResponse(path, method, body)) as T;
   }
   let response: Response;
   try {

@@ -1,14 +1,13 @@
-// The made-up library of the demo on GitHub Pages: seven people at a small company, the
-// meetings and lectures that they recorded, two series, comments, ratings, and the
-// history of Alex Morgan, the admin who is signed in. Every date counts back from the
-// moment that the page opened, so the library always looks recent.
-//
-// The lengths are those of the recordings that the samples stand for. The sample files
-// themselves last a few seconds, so the times in the comments stay within them.
+// The made-up library of the demo on GitHub Pages: seven people at a small company that
+// makes a video product, and the short videos that they share: design tips in slides,
+// screen recordings after the weekly sync, the slides of an all-hands and of an incident
+// review, and two calm loops. It holds comments, ratings, attachments, and the history
+// of Alex Morgan, the admin who is signed in. Every date counts back from the moment that
+// the page opened, so the library always looks recent. The length of each video is the
+// length of its file (media.ts), so the times in the comments stay within it.
 
 import type { Language, Session, SignIn } from "../../shared/api.ts";
-import type { DemoFileKey } from "./files.ts";
-import type { PictureFile, VideoFile } from "./media.ts";
+import type { AttachmentFile, PictureFile, VideoFile } from "./media.ts";
 
 export interface DemoPerson {
   id: string;
@@ -19,7 +18,7 @@ export interface DemoPerson {
 
 export interface DemoAttachment {
   id: string;
-  file: DemoFileKey;
+  file: AttachmentFile;
   createdAt: string;
 }
 
@@ -27,7 +26,6 @@ export interface DemoVideo {
   id: string;
   title: string;
   description: string;
-  durationSec: number;
   createdAt: string;
   updatedAt: string;
   uploaderId: string;
@@ -90,23 +88,23 @@ const PEOPLE = {
 };
 
 const VIDEOS = {
-  cellular: "k2f9x7q4m1v8c3np",
-  life: "r5t1w8z3b6n2h9ld",
-  mandelbrot: "p7c3m9x1q5v2j8tb",
-  gradients: "f4n8r2k6w1z9s3gy",
-  launch: "h9b2q6v1t8m4x3wc",
+  tipColors: "k2f9x7q4m1v8c3np",
+  tipType: "r5t1w8z3b6n2h9ld",
+  tipCharts: "p7c3m9x1q5v2j8tb",
+  checklist: "h9b2q6v1t8m4x3wc",
   pricing: "d3x8w5n1p7k2r9mf",
   beta: "w6m1t4z9c3q8v2hk",
-  allHands: "a8v3k7p2x6n1w5qe",
+  kickoff: "a8v3k7p2x6n1w5qe",
   incident: "j1q9r4c8m2t6z3vs",
-  design: "n5z2h8x3w7k1c9pr",
-  colorBars: "b7k4w1q9n3x6t2mz",
-  encoder: "e2p6v9m4c1z8k5rt",
+  checkout: "n5z2h8x3w7k1c9pr",
+  uploads: "e2p6v9m4c1z8k5rt",
+  lobby: "f4n8r2k6w1z9s3gy",
+  breathing: "b7k4w1q9n3x6t2mz",
 };
 
 const SERIES = {
-  patterns: "s8k3p1x6v9m2c7wb",
-  sync: "t4n9z2q7h1w5r8dk",
+  tips: "s8k3p1x6v9m2c7wb",
+  updates: "t4n9z2q7h1w5r8dk",
 };
 
 const HOUR_MS = 3_600_000;
@@ -127,7 +125,7 @@ export function createLibrary(now: Date): DemoLibrary {
     key: keyof typeof VIDEOS,
     fields: Omit<DemoVideo, "id" | "updatedAt" | "seriesId" | "seriesPosition" | "attachments"> & {
       series?: [key: keyof typeof SERIES, position: number];
-      attachments?: DemoFileKey[];
+      attachments?: AttachmentFile[];
     },
   ): DemoVideo => {
     const { series, attachments = [], ...rest } = fields;
@@ -151,16 +149,17 @@ export function createLibrary(now: Date): DemoLibrary {
 
   // Each video with the people who rated it and their stars.
   const stars: [keyof typeof VIDEOS, [keyof typeof PEOPLE, number][]][] = [
-    ["cellular", [["mina", 5], ["kenji", 4], ["jonas", 5], ["alex", 5]]],
-    ["life", [["mina", 4], ["priya", 5], ["lucia", 4], ["alex", 4]]],
-    ["mandelbrot", [["mina", 5], ["priya", 5], ["jonas", 4], ["lucia", 5]]],
-    ["gradients", [["mina", 5], ["kenji", 4]]],
-    ["launch", [["jonas", 4], ["lucia", 4]]],
+    ["tipColors", [["jonas", 5], ["kenji", 4], ["lucia", 5], ["alex", 5]]],
+    ["tipType", [["lucia", 5], ["daniel", 4], ["priya", 4], ["alex", 4]]],
+    ["tipCharts", [["priya", 5], ["jonas", 5], ["daniel", 4], ["lucia", 5]]],
+    ["checklist", [["jonas", 4], ["lucia", 4]]],
     ["pricing", [["mina", 5], ["jonas", 4], ["alex", 4]]],
-    ["allHands", [["mina", 4], ["daniel", 5], ["jonas", 4], ["lucia", 5], ["kenji", 4], ["alex", 4]]],
+    ["kickoff", [["mina", 4], ["daniel", 5], ["jonas", 4], ["lucia", 5], ["kenji", 4], ["alex", 4]]],
     ["incident", [["daniel", 5], ["jonas", 4]]],
-    ["design", [["lucia", 4], ["alex", 5]]],
-    ["colorBars", [["daniel", 4]]],
+    ["checkout", [["lucia", 4], ["alex", 5]]],
+    ["uploads", [["kenji", 5], ["jonas", 4]]],
+    ["lobby", [["priya", 5], ["mina", 4]]],
+    ["breathing", [["kenji", 5], ["lucia", 5], ["mina", 4]]],
   ];
 
   return {
@@ -169,199 +168,176 @@ export function createLibrary(now: Date): DemoLibrary {
       {
         id: PEOPLE.alex,
         displayName: "Alex Morgan",
-        bio: "Product manager. I post the recording of every weekly product sync, with the decisions in the description.",
+        bio: "Product manager. After each weekly sync, I post a short screen recording of what changed.",
         picture: "alex",
       },
-      {
-        id: PEOPLE.mina,
-        displayName: "Mina Sato",
-        bio: "Product designer. Design reviews, prototypes, and now and then a test of the studio.",
-        picture: "mina",
-      },
-      {
-        id: PEOPLE.daniel,
-        displayName: "Daniel Okafor",
-        bio: "Engineer. On Thursdays I teach Patterns in computation: small rules that draw big pictures.",
-        picture: "daniel",
-      },
-      {
-        id: PEOPLE.priya,
-        displayName: "Priya Nair",
-        bio: "Head of operations. All-hands, incident reviews, and the runbooks behind them.",
-        picture: null,
-      },
+      { id: PEOPLE.mina, displayName: "Mina Sato", bio: "Product designer. Design tips on Thursdays, and design reviews in between.", picture: "mina" },
+      { id: PEOPLE.daniel, displayName: "Daniel Okafor", bio: "Engineer. I explain how our uploads and storage work, mostly in diagrams.", picture: "daniel" },
+      { id: PEOPLE.priya, displayName: "Priya Nair", bio: "Head of operations. All-hands, incident reviews, and the breathing break.", picture: null },
       { id: PEOPLE.jonas, displayName: "Jonas Weber", bio: "Backend engineer. Uploads, storage, and anything that retries.", picture: "jonas" },
-      { id: PEOPLE.lucia, displayName: "Lucía Fernández", bio: "Marketing. I write the launch posts and the help center.", picture: null },
-      { id: PEOPLE.kenji, displayName: "Kenji Ito", bio: "Support lead. I bring what customers ask to the product sync.", picture: "kenji" },
+      { id: PEOPLE.lucia, displayName: "Lucía Fernández", bio: "Marketing. Launch posts, the help center, and the screen in the lobby.", picture: null },
+      { id: PEOPLE.kenji, displayName: "Kenji Ito", bio: "Support lead. I bring what customers ask to the weekly sync.", picture: "kenji" },
     ],
     videos: [
-      video("cellular", {
-        title: "Cellular automata, one row at a time",
+      video("tipColors", {
+        title: "Design tip 1: start from two colors",
         description:
-          "Lecture 1 of Patterns in computation. A row of cells, a rule of eight bits, and the pictures that grow from them: rule 30, rule 90, and rule 110, which can compute anything.\n\nThe table of rule 110 from the whiteboard is attached.",
-        durationSec: 3108,
-        createdAt: ago(34, 3),
-        uploaderId: PEOPLE.daniel,
-        media: "cellular-automata",
-        series: ["patterns", 1],
-        attachments: ["ruleTable"],
-      }),
-      video("life", {
-        title: "The Game of Life",
-        description:
-          "Lecture 2. Conway's Game of Life on a grid that wraps around: births, deaths, and the gliders and oscillators that come out of four rules. The orange cells in the demo are the ones that just died.",
-        durationSec: 2917,
-        createdAt: ago(27, 3),
-        uploaderId: PEOPLE.daniel,
-        media: "game-of-life",
-        series: ["patterns", 2],
-      }),
-      video("mandelbrot", {
-        title: "Fractals: zooming into the Mandelbrot set",
-        description:
-          "Lecture 3. One rule, z → z² + c, and a picture without an end. We count how fast each point escapes, color the counts, and zoom into seahorse valley.\n\nThe slides and the exercises are attached.",
-        durationSec: 3302,
+          "A dark color for text and a bright one for what matters, then lighter tints of both. Ink on white reads at 17.9 to 1, so the gold is for shapes, not for text.",
         createdAt: ago(20, 3),
-        uploaderId: PEOPLE.daniel,
-        media: "mandelbrot",
-        series: ["patterns", 3],
-        attachments: ["mandelbrotSlides", "exercises"],
+        uploaderId: PEOPLE.mina,
+        media: "tip-colors",
+        series: ["tips", 1],
       }),
-      video("gradients", {
-        title: "Noise, gradients, and color spaces",
+      video("tipType", {
+        title: "Design tip 2: one typeface, three sizes",
         description:
-          "Lecture 4. How a gradient moves between colors, why the middle of a gradient in RGB looks muddy, and how mixing in a perceptual space such as OKLCH keeps it bright.",
-        durationSec: 2781,
+          "One family, Noto Sans, at three sizes: 46 pixels for the heading, 30 for the line that explains it, and 20 for the details. Weight does the rest.",
         createdAt: ago(13, 3),
-        uploaderId: PEOPLE.daniel,
-        media: "gradients",
-        series: ["patterns", 4],
+        uploaderId: PEOPLE.mina,
+        media: "tip-type",
+        series: ["tips", 2],
       }),
-      video("launch", {
-        title: "Product sync: launch checklist",
+      video("tipCharts", {
+        title: "Design tip 3: label the data, not the axis",
         description:
-          "We went through the launch checklist. The copy of the pricing page is frozen, and the upload test passed with a 4 GB recording. The walkthrough for the help center still needs a recording. The checklist is attached.",
-        durationSec: 1908,
+          "Write the value on the bar, drop the gridlines, and color only the bar that matters. The slides are attached as a PDF.",
+        createdAt: ago(6, 3),
+        uploaderId: PEOPLE.mina,
+        media: "tip-charts",
+        series: ["tips", 3],
+        attachments: ["chartSlides"],
+      }),
+      video("checklist", {
+        title: "Product update: the launch checklist",
+        description:
+          "A quick walk through the launch checklist after the sync. Before Friday, the walkthrough for the help center still needs a recording. The checklist is attached.",
         createdAt: ago(15, 6),
         uploaderId: PEOPLE.alex,
-        media: "sync-launch",
-        series: ["sync", 1],
+        media: "update-checklist",
+        series: ["updates", 1],
         attachments: ["checklist"],
       }),
       video("pricing", {
-        title: "Product sync: pricing page review",
+        title: "Product update: yearly prices",
         description:
-          "Mina shared the new pricing page. We agreed on three plans and a yearly switch, and the table that compares the plans moves under the cards.",
-        durationSec: 1685,
+          "The pricing page has a yearly switch now. Billed yearly, Team costs $10 and Business $20 for each uploader a month. Recorded on the staging site.",
         createdAt: ago(8, 6),
         uploaderId: PEOPLE.alex,
-        media: "sync-pricing",
-        series: ["sync", 2],
+        media: "update-pricing",
+        series: ["updates", 2],
       }),
       video("beta", {
-        title: "Product sync: beta feedback",
+        title: "Product update: what the beta teams asked for",
         description:
-          "Twelve teams joined the beta. The top requests: sharing a series with people outside the library, and chapters in long recordings. Kenji summed up the support tickets.",
-        durationSec: 2000,
+          "Twelve teams joined the beta. They asked most for sharing a series outside the library and for chapters in long recordings. Next: chapters, then sharing.",
         createdAt: ago(1, 6),
         uploaderId: PEOPLE.alex,
-        media: "sync-beta",
-        series: ["sync", 3],
+        media: "update-beta",
+        series: ["updates", 3],
       }),
-      video("allHands", {
-        title: "All-hands: Q4 kickoff",
-        description: "Where Q3 landed, the three goals for Q4, and questions from everyone. The slides are attached.",
-        durationSec: 3765,
+      video("kickoff", {
+        title: "Q4 kickoff: the slides",
+        description:
+          "The slides of the all-hands, for the screens in the office: where Q3 landed, and three goals for Q4. The PDF is attached.",
         createdAt: ago(38, 2),
         uploaderId: PEOPLE.priya,
-        media: "all-hands",
+        media: "q4-kickoff",
         attachments: ["kickoffSlides"],
       }),
       video("incident", {
         title: "Incident review: object storage latency",
         description:
-          "Uploads and playback were slow for 47 minutes on Tuesday. We go through the timeline, what went well, and three action items. Blameless, as always.",
-        durationSec: 1452,
+          "Uploads and playback were slow for 47 minutes on Tuesday. These are the slides of the review. The full timeline and the latency are attached.",
         createdAt: ago(5, 4),
         uploaderId: PEOPLE.priya,
-        media: "incident-review",
+        media: "incident-summary",
         attachments: ["timeline", "latency"],
       }),
-      video("design", {
-        title: "Design review: mobile checkout",
+      video("checkout", {
+        title: "Checkout: three versions on a phone",
         description:
-          "Three versions of the checkout on a phone. We picked the middle one: the total stays in view, and the pay button stays under the thumb.",
-        durationSec: 1120,
+          "Three versions of the checkout on a phone, from the design review. We picked B: the total stays in view, and the pay button stays under the thumb.",
         createdAt: ago(3, 5),
         uploaderId: PEOPLE.mina,
-        media: "design-review",
+        media: "checkout-versions",
       }),
-      video("colorBars", {
-        title: "Studio check: color bars and tone",
-        description: "Bars and a 1 kHz tone from the new studio, to check the monitors and the levels before we record the course.",
-        durationSec: 120,
-        createdAt: ago(22, 1),
-        uploaderId: PEOPLE.mina,
-        media: "color-bars",
-      }),
-      video("encoder", {
-        title: "Encoder test: moving patterns at CRF 28",
-        description: "A test pattern through the encoder at CRF 28. Watch the counter and the moving gradients for banding.",
-        durationSec: 256,
+      video("uploads", {
+        title: "How uploads resume, in one diagram",
+        description:
+          "Why a large upload survives a flaky connection: the browser sends parts four at a time, retries a part rather than the file, and asks for a fresh URL on every attempt. The notes are attached.",
         createdAt: ago(10, 2),
         uploaderId: PEOPLE.daniel,
-        media: "encoder-test",
+        media: "uploads-diagram",
+        attachments: ["uploadSteps"],
+      }),
+      video("lobby", {
+        title: "Lobby screen: evening loop",
+        description: "Twelve seconds of dusk colors and soft light that loop on the screen in the lobby after six.",
+        createdAt: ago(22, 1),
+        uploaderId: PEOPLE.lucia,
+        media: "lobby-evening",
+      }),
+      video("breathing", {
+        title: "Breathing break",
+        description:
+          "Sixteen seconds to breathe along with: in while the light grows, out while it fades. Watch it two or three times between meetings.",
+        createdAt: ago(30, 2),
+        uploaderId: PEOPLE.priya,
+        media: "breathing-break",
       }),
     ],
     series: [
       {
-        id: SERIES.patterns,
-        title: "Patterns in computation",
+        id: SERIES.tips,
+        title: "Design tips",
         description:
-          "A short course on the patterns that simple rules make: cellular automata, the Game of Life, fractals, and gradients. A new lecture every Thursday.",
-        ownerId: PEOPLE.daniel,
-        createdAt: ago(35),
-        updatedAt: ago(13, 3),
+          "Short videos of the slides that we keep reusing: color, type, and charts. A new tip every Thursday, each under fifteen seconds.",
+        ownerId: PEOPLE.mina,
+        createdAt: ago(21),
+        updatedAt: ago(6, 3),
       },
       {
-        id: SERIES.sync,
-        title: "Weekly product sync",
-        description: "The weekly sync of the product team. The decisions are in the description of each recording, and the notes are attached.",
+        id: SERIES.updates,
+        title: "Product updates",
+        description: "Short screen recordings after the weekly sync: what changed in the product, and what comes next.",
         ownerId: PEOPLE.alex,
         createdAt: ago(15, 6),
         updatedAt: ago(1, 6),
       },
     ],
     comments: [
-      comment("cellular", "jonas", ago(33, 20), "Is the pattern at 0:04 rule 110? The triangles look like the ones on the whiteboard."),
-      comment("cellular", "daniel", ago(33, 18), "It is. Rule 110 gets its own exercise next week."),
-      comment("cellular", "kenji", ago(32, 2), "I ran rule 30 from a single cell after this. The left half is so regular, and the right half looks like noise."),
-      comment("life", "priya", ago(26, 4), "Sharing this with the new hires. It's the best explanation of emergent behavior that I know."),
-      comment("life", "lucia", ago(25, 22), "The gliders at 0:06 are hypnotic."),
-      comment("mandelbrot", "jonas", ago(19, 20), "Exercise 2 took me 3,000 steps before the picture stopped changing."),
-      comment("mandelbrot", "kenji", ago(19, 6), "0:05 is where the zoom passes the first spiral. I paused there for a long time."),
-      comment("mandelbrot", "mina", ago(18, 9), "The palette on page 4 of the slides is lovely. Can I borrow it for the brand refresh?"),
-      comment("mandelbrot", "daniel", ago(18, 7), "Of course, Mina. The colors are on page 4, and I'll add their hex values to the exercises."),
-      comment("gradients", "mina", ago(12, 5), "Finally an answer to why our blue-to-yellow gradient turned gray in the middle."),
-      comment("launch", "lucia", ago(14, 20), "I'll record the walkthrough for the help center and post it here by Friday."),
-      comment("pricing", "jonas", ago(7, 22), "The highlighted card at 0:03: do we have data that it's the most popular plan?"),
-      comment("pricing", "mina", ago(7, 20), "Good point. I'll change the badge to Recommended until we do."),
+      comment("tipColors", "jonas", ago(19, 22), "The tints at 0:06 are going straight into our slide template."),
+      comment("tipColors", "kenji", ago(19, 5), "Could there be a third color for warnings?"),
+      comment("tipColors", "mina", ago(19, 3), "Maybe in a later tip: when a third color earns its place."),
+      comment("tipType", "lucia", ago(12, 20), "Three sizes is so freeing. The help center used seven."),
+      comment("tipType", "daniel", ago(12, 6), "The scale at 0:05 is the clearest one I've seen."),
+      comment("tipCharts", "priya", ago(5, 22), "Using this for the chart of the next all-hands."),
+      comment("tipCharts", "jonas", ago(5, 20), "At 0:05 the numbers sit right on the bars. So much easier than reading an axis."),
+      comment("tipCharts", "daniel", ago(5, 4), "Could you do one for line charts?"),
+      comment("tipCharts", "mina", ago(5, 2), "The line chart at 0:09 is a preview of the next tip."),
+      comment("checklist", "lucia", ago(14, 20), "I'll record the walkthrough for the help center and post it here by Friday."),
+      comment("pricing", "jonas", ago(7, 22), "The yearly prices at 0:06: do we round them to whole dollars?"),
+      comment("pricing", "mina", ago(7, 20), "We do, and the cards say billed yearly now."),
       comment("beta", "kenji", ago(0, 20), "The summary of the tickets is in the support channel. Most requests for chapters come from teams that record lectures."),
-      comment("allHands", "daniel", ago(37, 21), "The chart of weekly teams at 0:04 deserves a poster."),
-      comment("allHands", "lucia", ago(37, 20), "Thank you for taking all the questions!"),
-      comment("incident", "jonas", ago(4, 21), "The playhead at 0:05 lines up with the failed parts in latency-p99.csv."),
-      comment("design", "alex", ago(2, 3), "The total that stays in view is a clear win. Let's ship the middle one."),
+      comment("kickoff", "daniel", ago(37, 21), "The chart at 0:04 deserves a poster."),
+      comment("kickoff", "lucia", ago(37, 20), "Thank you for taking all the questions!"),
+      comment("incident", "jonas", ago(4, 21), "The timeline at 0:04 lines up with the failed parts in latency-p99.csv."),
+      comment("checkout", "alex", ago(2, 3), "Version B keeps the total in view. Let's ship it."),
+      comment("uploads", "kenji", ago(9, 20), "Sending this to customers who ask why a big upload survives a flaky connection."),
+      comment("lobby", "priya", ago(21, 20), "So calm. Could we have a morning version too?"),
+      comment("lobby", "lucia", ago(21, 18), "Working on it, in ocean colors."),
+      comment("breathing", "kenji", ago(29, 4), "I play this between support calls. Four seconds in, four seconds out."),
     ],
     ratings: stars.flatMap(([on, raters]) => raters.map(([by, count]) => ({ videoId: VIDEOS[on], personId: PEOPLE[by], stars: count }))),
-    // Alex is halfway through the course and watched last week's sync, so the home page
-    // offers the next lecture first, then the next sync.
+    // Alex has seen the first two design tips and last week's update, so the home page
+    // offers the third tip first, then the next update.
     history: [
-      { videoId: VIDEOS.life, watchedAt: ago(0, 19) },
-      { videoId: VIDEOS.design, watchedAt: ago(1, 22) },
+      { videoId: VIDEOS.tipType, watchedAt: ago(0, 19) },
+      { videoId: VIDEOS.checkout, watchedAt: ago(1, 22) },
       { videoId: VIDEOS.incident, watchedAt: ago(4, 2) },
       { videoId: VIDEOS.pricing, watchedAt: ago(7, 3) },
-      { videoId: VIDEOS.cellular, watchedAt: ago(26) },
-      { videoId: VIDEOS.allHands, watchedAt: ago(36) },
+      { videoId: VIDEOS.tipColors, watchedAt: ago(12) },
+      { videoId: VIDEOS.kickoff, watchedAt: ago(36) },
     ],
     signIn: {
       method: "passkeys",

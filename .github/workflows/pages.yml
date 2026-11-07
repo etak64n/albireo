@@ -1,9 +1,9 @@
 # Publishes the GitHub Pages site of albireo on every push to main. The demo takes the
 # root of the site: the browser app with sample data in place of the API
 # (vite.demo.config.ts, src/demo/), and the sample videos, pictures, and attachments that
-# scripts/demo-media.ts makes with ffmpeg. The documentation site (docs/, built with
-# Starlight) takes /docs/. Each part of the site goes into a folder of demo-dist, which
-# becomes the site.
+# scripts/demo-media.ts makes with Chromium and ffmpeg. The documentation site (docs/,
+# built with Starlight) takes /docs/. Each part of the site goes into a folder of
+# demo-dist, which becomes the site.
 name: Pages
 
 on:
@@ -44,12 +44,21 @@ jobs:
       - name: Build the demo
         run: pnpm exec vite build --config vite.demo.config.ts --mode demo --base "/${{ github.event.repository.name }}/"
 
-      - name: Install ffmpeg
-        run: command -v ffmpeg || { sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg; }
+      # Chromium draws the slides of the sample videos in Noto Sans, and ffmpeg makes the videos.
+      # Playwright goes in a folder of its own, outside the dependencies of albireo.
+      - name: Install ffmpeg, Noto Sans, and Playwright
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-core
+          mkdir -p "$RUNNER_TEMP/playwright"
+          cd "$RUNNER_TEMP/playwright"
+          echo '{ "name": "demo-media", "private": true }' > package.json
+          pnpm add playwright@1.65.0
+          pnpm exec playwright install --with-deps chromium
 
       # Short videos with their posters, the pictures of the people, and the attachments, under demo-dist/media.
       - name: Make the sample media
-        run: node scripts/demo-media.ts demo-dist
+        run: node scripts/demo-media.ts demo-dist "$RUNNER_TEMP/playwright"
 
       # The documentation site has its own dependencies and its base at /<repository>/docs.
       - name: Build the documentation

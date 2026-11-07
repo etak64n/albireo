@@ -2,9 +2,9 @@
 // data.ts, so that the demo shows the real screens without a Worker, Cloudflare Access,
 // or storage. Changes, such as a rating, a comment, a new series, or the language, stay
 // in memory until the page reloads. The videos, the pictures, and the attachments are
-// files beside the demo (media.ts) in place of signed URLs, and the demo keeps no files
-// of its own, so uploads fail with a short message. Only the demo build imports this
-// file (src/api.ts).
+// files beside the demo (media.ts) in place of signed URLs, with their sizes in a list
+// beside them, and the demo keeps no files of its own, so uploads fail with a short
+// message. Only the demo build imports this file (src/api.ts).
 
 import {
   BIO_MAX_LENGTH,
@@ -46,17 +46,24 @@ import {
 } from "../../shared/api.ts";
 import { ApiError } from "../api.ts";
 import { createLibrary, type DemoAttachment, type DemoComment, type DemoPerson, type DemoSeries, type DemoVideo } from "./data.ts";
-import { DEMO_FILES } from "./files.ts";
-import { MEDIA_PATHS } from "./media.ts";
+import { ATTACHMENT_FILES, MEDIA_PATHS, VIDEO_SECONDS } from "./media.ts";
 
 const library = createLibrary(new Date());
 
 const NO_FILES = "The demo does not keep files, so uploads are off.";
-// The sample files are 720p. The recordings that they stand for were about 1.6 Mbit/s.
+// Every sample video is 720p.
 const SAMPLE_WIDTH = 1280;
 const SAMPLE_HEIGHT = 720;
-const BYTES_PER_SECOND = 200_000;
 const ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+// The sizes of the files beside the demo, by their paths, which scripts/demo-media.ts lists
+// once it has made them. Without the list, sizes show as 0 bytes, and the rest still works.
+let fileSizes: Record<string, number> = {};
+const sizesLoaded = fetch(mediaUrl(MEDIA_PATHS.sizes))
+  .then(async (response) => {
+    if (response.ok) fileSizes = (await response.json()) as Record<string, number>;
+  })
+  .catch(() => undefined);
 
 type Fields = Record<string, unknown>;
 
@@ -116,7 +123,8 @@ const ROUTES = [
  * would give it: a copy of the data, so that a page can keep it while the library changes,
  * or undefined where the Worker answers 204. Errors are an ApiError, as from the Worker.
  */
-export function demoResponse(path: string, method: string, body: unknown): unknown {
+export async function demoResponse(path: string, method: string, body: unknown): Promise<unknown> {
+  await sizesLoaded;
   const url = new URL(path, "https://demo.invalid");
   for (const candidate of ROUTES) {
     const match = candidate.path.exec(url.pathname);
@@ -240,7 +248,7 @@ function summary(video: DemoVideo): VideoSummary {
   return {
     id: video.id,
     title: video.title,
-    durationSec: video.durationSec,
+    durationSec: VIDEO_SECONDS[video.media],
     thumbnailUrl: mediaUrl(MEDIA_PATHS.poster(video.media)),
     createdAt: video.createdAt,
     uploader: personSummary(video.uploaderId),
@@ -252,10 +260,10 @@ function detail(video: DemoVideo): VideoDetail {
     id: video.id,
     title: video.title,
     description: video.description,
-    durationSec: video.durationSec,
+    durationSec: VIDEO_SECONDS[video.media],
     width: SAMPLE_WIDTH,
     height: SAMPLE_HEIGHT,
-    fileSize: video.durationSec * BYTES_PER_SECOND,
+    fileSize: fileSizes[MEDIA_PATHS.video(video.media)] ?? 0,
     contentType: "video/mp4",
     createdAt: video.createdAt,
     updatedAt: video.updatedAt,
@@ -270,13 +278,14 @@ function detail(video: DemoVideo): VideoDetail {
 }
 
 function attachment(item: DemoAttachment): VideoAttachment {
-  const file = DEMO_FILES[item.file];
-  const url = mediaUrl(MEDIA_PATHS.attachment(file.fileName));
+  const file = ATTACHMENT_FILES[item.file];
+  const path = MEDIA_PATHS.attachment(file.fileName);
+  const url = mediaUrl(path);
   return {
     id: item.id,
     fileName: file.fileName,
     contentType: file.contentType,
-    fileSize: new TextEncoder().encode(file.text).byteLength,
+    fileSize: fileSizes[path] ?? 0,
     createdAt: item.createdAt,
     viewUrl: url,
     downloadUrl: url,
