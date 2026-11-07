@@ -1,6 +1,6 @@
 {
   "name": "albireo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A private video library that runs on Cloudflare Workers and keeps videos in S3-compatible object storage.",
   "license": "MIT",
