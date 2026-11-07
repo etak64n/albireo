@@ -478,6 +478,7 @@ describe("people", () => {
       email: VIEWER_EMAIL,
       isAdmin: false,
       joinedAt: "2026-11-04T00:00:01.000Z",
+      language: "en",
       logoutUrl: "/cdn-cgi/access/logout",
     });
     // The second request finds the same person.
@@ -509,6 +510,26 @@ describe("people", () => {
     await app.signedRequest("/api/me", json({ bio: "Recordings of our meetings" }, "PATCH"));
     const { user } = await body<UserResponse>(await app.requestAs(OTHER_EMAIL, "/api/users/user000000000001"));
     expect(user.bio).toBe("Recordings of our meetings");
+  });
+
+  it("changes the language of the browser app, which only the person sees", async () => {
+    const app = await createTestApp();
+    const response = await app.signedRequest("/api/me", json({ language: "ja" }, "PATCH"));
+    expect((await body<MeResponse>(response)).me).toMatchObject({ displayName: "viewer", bio: "", language: "ja" });
+    expect((await body<MeResponse>(await app.signedRequest("/api/me"))).me.language).toBe("ja");
+    // The page of the person shows others their profile without the language.
+    const { user } = await body<UserResponse>(await app.requestAs(OTHER_EMAIL, "/api/users/user000000000001"));
+    expect(user).toEqual({ id: "user000000000001", displayName: "viewer", avatarUrl: null, bio: "" });
+  });
+
+  it("refuses a language that the browser app does not have", async () => {
+    const app = await createTestApp();
+    const response = await app.signedRequest("/api/me", json({ language: "fr" }, "PATCH"));
+    expect(response.status).toBe(400);
+    expect((await body<ApiErrorBody>(response)).error.message).toBe('language must be "en" or "ja".');
+    expect((await app.signedRequest("/api/me", json({ language: null }, "PATCH"))).status).toBe(400);
+    expect((await app.signedRequest("/api/me", json({}, "PATCH"))).status).toBe(400);
+    expect((await body<MeResponse>(await app.signedRequest("/api/me"))).me.language).toBe("en");
   });
 
   it("sets and removes the picture of a person", async () => {

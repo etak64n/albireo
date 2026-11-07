@@ -15,6 +15,13 @@ export const ATTACHMENT_MAX_BYTES = 500 * 1024 * 1024;
 export const ATTACHMENT_NAME_MAX_LENGTH = 255;
 /** IDs of videos, users, series, comments, and attachments: 16 digits and lowercase letters. */
 export const ID_PATTERN = /^[0-9a-z]{16}$/;
+/** The languages of the browser app. Each person chooses one on the account page. */
+export const LANGUAGES = ["en", "ja"] as const;
+export type Language = (typeof LANGUAGES)[number];
+
+export function isLanguage(value: unknown): value is Language {
+  return typeof value === "string" && (LANGUAGES as readonly string[]).includes(value);
+}
 
 /** A person as other people see them: the uploader of a video or the owner of a series. */
 export interface UserSummary {
@@ -35,6 +42,8 @@ export interface Me extends UserProfile {
   isAdmin: boolean;
   /** When the person first signed in, which made their record in the library. */
   joinedAt: string;
+  /** The language of the browser app that the person chose. Only they see it. */
+  language: Language;
   /** Where to send the browser to sign out, or null when nobody signs in, as under `cf dev`. */
   logoutUrl: string | null;
 }
@@ -90,6 +99,7 @@ export interface SignInResponse {
 export interface UpdateMeRequest {
   displayName?: string;
   bio?: string;
+  language?: Language;
 }
 
 export interface UserResponse {

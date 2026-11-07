@@ -1,7 +1,7 @@
 // Reads and writes the users table in D1. Cloudflare Access signs people in,
 // so a user is only an email with a display name that the person chooses.
 
-import { DISPLAY_NAME_MAX_LENGTH } from "../shared/api.ts";
+import { DISPLAY_NAME_MAX_LENGTH, isLanguage, type Language } from "../shared/api.ts";
 import type { D1Database } from "./env.ts";
 
 export interface UserRecord {
@@ -11,6 +11,8 @@ export interface UserRecord {
   bio: string;
   /** Key of the picture in the bucket, or null for the default person icon. */
   avatarKey: string | null;
+  /** The language of the browser app that the person chose. */
+  language: Language;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,11 +23,12 @@ interface UserRow {
   display_name: string;
   bio: string;
   avatar_key: string | null;
+  language: string;
   created_at: string;
   updated_at: string;
 }
 
-const COLUMNS = "id, email, display_name, bio, avatar_key, created_at, updated_at";
+const COLUMNS = "id, email, display_name, bio, avatar_key, language, created_at, updated_at";
 
 export class UserRepository {
   readonly #db: D1Database;
@@ -65,21 +68,25 @@ export class UserRepository {
     return user;
   }
 
-  /** Changes the display name, the bio, or both. */
-  async updateProfile(
+  /** Changes the display name, the bio, the language, or some of them. */
+  async update(
     id: string,
-    profile: { displayName: string | undefined; bio: string | undefined },
+    changes: { displayName: string | undefined; bio: string | undefined; language: Language | undefined },
     now: string,
   ): Promise<boolean> {
     const assignments: string[] = [];
     const values: unknown[] = [];
-    if (profile.displayName !== undefined) {
+    if (changes.displayName !== undefined) {
       assignments.push("display_name = ?");
-      values.push(profile.displayName);
+      values.push(changes.displayName);
     }
-    if (profile.bio !== undefined) {
+    if (changes.bio !== undefined) {
       assignments.push("bio = ?");
-      values.push(profile.bio);
+      values.push(changes.bio);
+    }
+    if (changes.language !== undefined) {
+      assignments.push("language = ?");
+      values.push(changes.language);
     }
     assignments.push("updated_at = ?");
     values.push(now, id);
@@ -104,6 +111,8 @@ function toRecord(row: UserRow): UserRecord {
     displayName: row.display_name,
     bio: row.bio,
     avatarKey: row.avatar_key,
+    // The Worker writes only the languages of the browser app. Anything else reads as English.
+    language: isLanguage(row.language) ? row.language : "en",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

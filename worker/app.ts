@@ -19,6 +19,8 @@ import {
   DESCRIPTION_MAX_LENGTH,
   DISPLAY_NAME_MAX_LENGTH,
   ID_PATTERN,
+  isLanguage,
+  LANGUAGES,
   LIST_PAGE_SIZE,
   MAX_PART_URLS_PER_REQUEST,
   RATING_MAX_STARS,
@@ -31,6 +33,7 @@ import {
   type EpisodeLink,
   type HistoryResponse,
   type ImageUploadResponse,
+  type Language,
   type ListCommentsResponse,
   type ListSeriesResponse,
   type ListVideosResponse,
@@ -109,6 +112,7 @@ interface Viewer {
   bio: string;
   avatarKey: string | null;
   joinedAt: string;
+  language: Language;
   isAdmin: boolean;
 }
 
@@ -195,13 +199,16 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
   app.get("/api/me", async (c) => c.json<MeResponse>({ me: await toMe(c.get("viewer"), c.get("config"), store(c.get("config"))) }));
 
   app.patch("/api/me", async (c) => {
-    const body = await readJsonObject(c.req.raw, ["displayName", "bio"]);
+    const body = await readJsonObject(c.req.raw, ["displayName", "bio", "language"]);
     const displayName = readOptionalString(body, "displayName", { min: 1, max: DISPLAY_NAME_MAX_LENGTH, trim: true });
     const bio = readOptionalString(body, "bio", { min: 0, max: BIO_MAX_LENGTH, trim: false });
-    if (displayName === undefined && bio === undefined) throw badRequest("Send a displayName, a bio, or both.");
+    const language = readOptionalLanguage(body);
+    if (displayName === undefined && bio === undefined && language === undefined) {
+      throw badRequest("Send at least one of displayName, bio, and language.");
+    }
     const viewer = c.get("viewer");
     const users = new UserRepository(c.env.DB);
-    await users.updateProfile(viewer.id, { displayName, bio }, now());
+    await users.update(viewer.id, { displayName, bio, language }, now());
     return c.json<MeResponse>({ me: await toMe(await reloadViewer(users, viewer), c.get("config"), store(c.get("config"))) });
   });
 
@@ -828,7 +835,15 @@ function searchOffset(cursor: string | undefined): number {
 }
 
 function viewerOf(user: UserRecord): Omit<Viewer, "isAdmin"> {
-  return { id: user.id, email: user.email, displayName: user.displayName, bio: user.bio, avatarKey: user.avatarKey, joinedAt: user.createdAt };
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    bio: user.bio,
+    avatarKey: user.avatarKey,
+    joinedAt: user.createdAt,
+    language: user.language,
+  };
 }
 
 async function reloadViewer(users: UserRepository, viewer: Viewer): Promise<Viewer> {
@@ -846,6 +861,7 @@ async function toMe(viewer: Viewer, config: RuntimeConfig, store: ObjectStore): 
     email: viewer.email,
     isAdmin: viewer.isAdmin,
     joinedAt: viewer.joinedAt,
+    language: viewer.language,
     logoutUrl: config.authMode === "cloudflare-access" ? ACCESS_LOGOUT_PATH : null,
   };
 }
@@ -856,6 +872,14 @@ async function toProfile(user: UserRecord, store: ObjectStore): Promise<UserProf
 
 async function signedOrNull(store: ObjectStore, key: string | null): Promise<string | null> {
   return key === null ? null : store.presignGet(key);
+}
+
+/** The language of the browser app in a request body, which must be one that the app has. */
+function readOptionalLanguage(body: JsonObject): Language | undefined {
+  if (!("language" in body)) return undefined;
+  const language = body.language;
+  if (!isLanguage(language)) throw badRequest(`language must be ${LANGUAGES.map((name) => `"${name}"`).join(" or ")}.`);
+  return language;
 }
 
 function pathId(value: string | undefined, what: string): string {
