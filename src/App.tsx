@@ -1,12 +1,13 @@
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import { LibraryProvider } from "./library.tsx";
+import { AccountPage } from "./pages/AccountPage.tsx";
 import { AllVideosPage } from "./pages/AllVideosPage.tsx";
+import { ChannelSettingsPage } from "./pages/ChannelSettingsPage.tsx";
 import { HistoryPage } from "./pages/HistoryPage.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { SearchPage } from "./pages/SearchPage.tsx";
 import { SeriesPage } from "./pages/SeriesPage.tsx";
-import { SettingsPage } from "./pages/SettingsPage.tsx";
 import { UserPage } from "./pages/UserPage.tsx";
 import { VideoPage } from "./pages/VideoPage.tsx";
 import { usePathname, useRoute } from "./router.tsx";
@@ -40,8 +41,10 @@ function Page() {
       return <SearchPage />;
     case "history":
       return <HistoryPage />;
-    case "settings":
-      return <SettingsPage />;
+    case "channel-settings":
+      return <ChannelSettingsPage />;
+    case "account":
+      return <AccountPage />;
     case "video":
       return <VideoPage key={route.id} id={route.id} />;
     case "series":

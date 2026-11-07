@@ -14,7 +14,7 @@ import { useUploads } from "../uploads.tsx";
 import { NotFoundPage } from "./NotFoundPage.tsx";
 import { Button } from "../components/ui/button.tsx";
 
-/** The page of one person: their picture, name, and bio, and the series and videos that they made. */
+/** The channel of one person: their picture, name, and bio, and the series and videos that they made. */
 export function UserPage({ id }: { id: string }) {
   const { me } = useSession();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -38,7 +38,7 @@ export function UserPage({ id }: { id: string }) {
     }
   }, [id]);
 
-  // The videos load again when an upload finishes, so a new one shows on your own page.
+  // The videos load again when an upload finishes, so a new one shows on your own channel.
   useEffect(() => {
     void load();
   }, [load, completed]);
@@ -58,7 +58,7 @@ export function UserPage({ id }: { id: string }) {
   }
 
   if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
-  // Your own page shows your latest profile at once, as you may have just changed it in the settings.
+  // Your own channel shows your latest picture, name, and bio at once, as you may have just changed them in the channel settings.
   const profile = isMe ? me : user;
   usePageTitle(user === null ? null : (profile?.displayName ?? null));
 
@@ -82,7 +82,7 @@ export function UserPage({ id }: { id: string }) {
               <h1 className="min-w-0 flex-1 truncate text-display font-bold text-strong">{profile.displayName}</h1>
               {isMe && (
                 <Button asChild>
-                  <Link to="/settings">Edit profile</Link>
+                  <Link to="/settings/channel">Channel settings</Link>
                 </Button>
               )}
             </div>

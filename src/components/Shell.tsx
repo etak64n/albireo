@@ -1,4 +1,4 @@
-import { History, House, Layers, LayoutGrid, LogOut, Menu as MenuIcon, Plus, Search, Settings, UserRound, X } from "lucide-react";
+import { History, House, KeyRound, Layers, LayoutGrid, LogOut, Menu as MenuIcon, Plus, Search, Settings, UserRound, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import appearance from "virtual:albireo-appearance";
 import { SEARCH_QUERY_MAX_LENGTH, TITLE_MAX_LENGTH } from "../../shared/api.ts";
@@ -127,7 +127,7 @@ function SearchBox() {
   );
 }
 
-/** The menu of the signed-in person under their picture: their page, the profile settings, and signing out. */
+/** The menu of the signed-in person under their picture: their channel, its settings, their account, and signing out. */
 function AccountMenu() {
   const { me } = useSession();
   const logoutUrl = me.logoutUrl;
@@ -153,11 +153,15 @@ function AccountMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => navigate(`/users/${me.id}`)}>
           <UserRound />
-          Your page
+          Your channel
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => navigate("/settings")}>
+        <DropdownMenuItem onSelect={() => navigate("/settings/channel")}>
           <Settings />
-          Profile settings
+          Channel settings
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/settings/account")}>
+          <KeyRound />
+          Account
         </DropdownMenuItem>
         {logoutUrl !== null && (
           <DropdownMenuItem onSelect={() => window.location.assign(logoutUrl)}>

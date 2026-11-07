@@ -24,7 +24,7 @@ This README explains what albireo does, how it works, how to run it on your mach
     - [Ratings](#ratings)
     - [Comments](#comments)
     - [Attachments](#attachments)
-    - [Profiles](#profiles)
+    - [Channels](#channels)
     - [Limits](#limits)
     - [What albireo does not do](#what-albireo-does-not-do)
   - [Try it locally](#try-it-locally)
@@ -209,7 +209,7 @@ albireo has nine features.
 6. Ratings
 7. Comments
 8. Attachments
-9. Profiles
+9. Channels
 
 The rules of who can do what come first, and each feature follows in its own subsection.
 
@@ -353,20 +353,21 @@ When the browser cannot read the file, it opens the signed URL instead.
 
 Removing an attachment takes it out of albireo, and the file stays in the bucket.
 
-### Profiles
+### Channels
 
-The profile settings (`/settings`) change the picture, the display name, and the bio (src/pages/SettingsPage.tsx).
+Each person has a channel (`/users/<ID>`) with their picture, name, bio, series, and videos (src/pages/UserPage.tsx).
+
+The channel settings (`/settings/channel`) change the picture, the display name, and the bio that others see on your channel (src/pages/ChannelSettingsPage.tsx).
 
 - The display name has 1 to 50 characters, and the bio at most 1,000.
 - You move and zoom the picture to choose a circle. The browser turns it into a JPEG of 256 by 256 pixels (src/lib/image.ts).
 - Removing the picture brings back the default person icon. The file stays in the bucket.
 
-Under Sign-in, the profile settings show the email that you signed in with, the login method of the session, such as a passkey, and the time of the sign-in.
+The account page (`/settings/account`) shows what only you see: the email that you signed in with, the login method of the session, such as a passkey, and the time of the sign-in (src/pages/AccountPage.tsx).
 The token that Access adds to each request leaves out the login method, so the Worker asks Access for the identity of the session (`/cdn-cgi/access/get-identity` on the team domain).
-Under `cf dev`, where Access does not run, the section shows the email alone.
+Under `cf dev`, where Access does not run, the page shows the email alone.
 
-Each person has a page (`/users/<ID>`) with their picture, name, bio, series, and videos (src/pages/UserPage.tsx).
-The menu under your picture in the header links to your page, to the profile settings, and, with Access, to logging out.
+The menu under your picture in the header links to your channel, to the channel settings, to the account page, and, with Access, to logging out.
 
 ### Limits
 
