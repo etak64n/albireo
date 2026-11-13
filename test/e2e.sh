@@ -78,8 +78,9 @@ start_albireo() {
 
 echo "Start albireo"
 start_albireo
-[[ $("${s3[@]}" list-objects-v2 --bucket "$bucket" --prefix albireo-check/ --query KeyCount) == 0 ]] \
-  || fail "the check of the bucket left objects behind"
+# Contents is missing from the answer when no object matches, which the query counts as none.
+left=$("${s3[@]}" list-objects-v2 --bucket "$bucket" --prefix albireo-check/ --query 'length(Contents || `[]`)' --output text)
+[[ $left == 0 ]] || { "${s3[@]}" list-objects-v2 --bucket "$bucket" --prefix albireo-check/; fail "the check of the bucket left $left objects behind"; }
 api=(-fsS -H 'Content-Type: application/json')
 [[ $(curl "${api[@]}" "$base/api/me" | jq -r .me.displayName) == Me ]] || fail "albireo has no person named Me"
 curl -fsS "$base/" | grep -q '<div id="root">' || fail "albireo serves no page"

@@ -111,7 +111,7 @@ describe("writes", () => {
     try {
       const store = new S3ObjectStore({ ...storage, endpoint: server.endpoint });
       const write = store.putObject("thumbnails/abc.jpg", "image/jpeg", streamOf("jpeg"), 4);
-      await expect(write).rejects.toThrow(new StorageError("PutObject failed with HTTP 403 (AccessDenied: Access Denied)."));
+      await expect(write).rejects.toThrow(new StorageError("PutObject failed with HTTP 403 (AccessDenied: Access Denied).", 403, "AccessDenied"));
       await expect(write).rejects.toMatchObject({ status: 403, code: "AccessDenied" });
     } finally {
       await server.close();
@@ -166,7 +166,7 @@ describe("reads", () => {
   it("reports other answers as storage failures", async () => {
     stubFetch(new Response("<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>", { status: 403 }));
     await expect(new S3ObjectStore(storage).getObject("videos/abc/original.mp4", "GET", new Headers())).rejects.toThrow(
-      new StorageError("GetObject failed with HTTP 403 (AccessDenied: Access Denied)."),
+      new StorageError("GetObject failed with HTTP 403 (AccessDenied: Access Denied).", 403, "AccessDenied"),
     );
   });
 });
@@ -189,7 +189,7 @@ describe("other requests", () => {
     const store = new S3ObjectStore(storage);
     await expect(
       store.completeMultipartUpload("videos/abc/original.mp4", "upload-1", [{ partNumber: 1, etag: '"etag-1"' }]),
-    ).rejects.toThrow(new StorageError("CompleteMultipartUpload failed with HTTP 200 (InvalidPart: A part could not be found.)."));
+    ).rejects.toThrow(new StorageError("CompleteMultipartUpload failed with HTTP 200 (InvalidPart: A part could not be found.).", 200, "InvalidPart"));
   });
 
   it("reports a storage service that cannot be reached as a storage failure", async () => {
@@ -230,7 +230,7 @@ describe("other requests", () => {
   it("reports a key that may not delete objects", async () => {
     stubFetch(new Response("<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>", { status: 403 }));
     await expect(new S3ObjectStore(storage).deleteObject("thumbnails/abc.jpg")).rejects.toThrow(
-      new StorageError("DeleteObject failed with HTTP 403 (AccessDenied: Access Denied)."),
+      new StorageError("DeleteObject failed with HTTP 403 (AccessDenied: Access Denied).", 403, "AccessDenied"),
     );
   });
 });
