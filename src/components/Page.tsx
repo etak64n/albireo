@@ -1,0 +1,73 @@
+// The blocks that pages are made of: the heading of a page, the sections under it, and the
+// list of details.
+
+import type { ReactNode } from "react";
+import { cn } from "../lib/utils.ts";
+
+/** The heading of a list page, with the actions of the whole page on its right, over a line. */
+export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
+  return (
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+      <h1 className="min-w-0 text-display font-bold break-words text-heading">{title}</h1>
+      {actions !== undefined && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+    </header>
+  );
+}
+
+/** A part of a page under a 20px heading, with its actions on the right of the heading. */
+export function Section({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="grid min-w-0 content-start gap-4">
+      <div className="flex min-h-7 flex-wrap items-center justify-between gap-3">
+        <h2 className="text-figure font-bold text-strong">{title}</h2>
+        {actions !== undefined && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/**
+ * Facts of one thing, each as its name and the value under it: one under another in a
+ * narrow column, or side by side in rows across a page.
+ */
+export function DetailList({
+  items,
+  layout = "column",
+}: {
+  /** wide: in rows, the fact takes two columns, as the stars of a rating need. */
+  items: { label: string; value: ReactNode; wide?: boolean }[];
+  layout?: "column" | "row";
+}) {
+  return (
+    <dl className={layout === "column" ? "grid gap-4" : "grid grid-cols-2 gap-x-8 gap-y-4 @xl:grid-cols-3 @3xl:grid-cols-5"}>
+      {items.map((item) => (
+        <div key={item.label} className={cn("grid gap-1", layout === "row" && item.wide === true && "col-span-2")}>
+          <dt className="text-sm font-bold text-strong">{item.label}</dt>
+          <dd className="text-sm text-label">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * Facts of one thing as the rows of a table: the name in a column on the left, the value
+ * on the right, and a fine line under each row.
+ */
+export function DetailTable({ items }: { items: { label: string; value: ReactNode }[] }) {
+  return (
+    <table className="w-full border-t border-border text-sm">
+      <tbody>
+        {items.map((item) => (
+          <tr key={item.label} className="border-b border-hairline">
+            <th scope="row" className="w-36 px-2 py-3 text-left align-top font-semibold text-strong sm:w-56">
+              {item.label}
+            </th>
+            <td className="px-2 py-3 align-top text-strong">{item.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}

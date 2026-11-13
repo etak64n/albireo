@@ -1,0 +1,107 @@
+# Checks albireo on every push to main and every pull request: the types, the tests, and the
+# build of the browser app; the Docker image, which test/e2e.sh runs end to end with a
+# bucket on amd64 and arm64; and the browser app of the image in Google Chrome, through
+# test/browser/run.sh.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Installs the pnpm version that "packageManager" in package.json names.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - run: pnpm exec vite build
+
+  # The image on both architectures that it ships for, each on a runner of its own.
+  e2e:
+    name: e2e (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      # CI keeps a cache for each architecture. Releases build without it.
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: albireo:e2e
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+
+      - run: ./test/e2e.sh albireo:e2e
+
+  # The browser app in Google Chrome, on amd64 only: Playwright runs Chrome on Linux for
+  # amd64 alone, and the browser app is the same JavaScript on every architecture.
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: albireo:e2e
+          cache-from: type=gha,scope=linux/amd64
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: test/browser/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: test/browser/pnpm-lock.yaml
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends ffmpeg
+
+      - run: pnpm --dir test/browser install --frozen-lockfile
+
+      - run: ./test/browser/run.sh albireo:e2e
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: screenshots
+          path: test/browser/out/
+          if-no-files-found: ignore
+          retention-days: 14

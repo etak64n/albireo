@@ -1,0 +1,119 @@
+# Publishes the GitHub Pages site of albireo on every push to main. The demo takes the
+# root of the site: the browser app with sample data in place of the API
+# (vite.demo.config.ts, src/demo/), and the sample videos, pictures, and attachments that
+# scripts/demo-media.ts makes with Chromium and ffmpeg. The documentation site (docs/,
+# built with Starlight) takes /docs/. Each part of the site goes into a folder of
+# demo-dist, which becomes the site.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One publication at a time. A newer push replaces a run that has not finished.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Installs the pnpm version that "packageManager" in package.json names.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            docs/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # Pages serves a project site under the name of the repository, such as /albireo-on-cloudflare/.
+      # The build empties demo-dist first, so the other parts of the site come after it.
+      - name: Build the demo
+        run: pnpm exec vite build --config vite.demo.config.ts --mode demo --base "/${{ github.event.repository.name }}/"
+
+      # Chromium draws the slides of the sample videos in Noto Sans, and ffmpeg makes the videos.
+      # Playwright goes in a folder of its own, outside the dependencies of albireo.
+      # Playwright draws the pictures, pptxgenjs makes the PowerPoint file, and docx the Word
+      # document. They go in a folder of their own, outside the dependencies of albireo.
+      - name: Install ffmpeg, Noto Sans, Playwright, pptxgenjs, and docx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-core
+          mkdir -p "$RUNNER_TEMP/demo-tools"
+          cd "$RUNNER_TEMP/demo-tools"
+          echo '{ "name": "demo-tools", "private": true }' > package.json
+          pnpm add playwright@1.65.0 pptxgenjs@4.0.1 docx@9.15.0
+          pnpm exec playwright install --with-deps chromium
+
+      # Short videos with their posters, the pictures of the people, and the attachments, under demo-dist/media.
+      - name: Make the sample media
+        run: node scripts/demo-media.ts demo-dist "$RUNNER_TEMP/demo-tools"
+
+      # Opens the demo with the Content-Security-Policy that a deployment sends: the pages of the
+      # app, the preview of each attachment of a video, a search, and the choice of a video and a picture.
+      # The demo does not go out when the browser blocks anything (scripts/demo-csp.ts).
+      - name: Check the Content-Security-Policy
+        run: node scripts/demo-csp.ts demo-dist "$RUNNER_TEMP/demo-tools" "/${{ github.event.repository.name }}/"
+
+      # The poster and two frames of each video, and the pictures of the people, kept with the
+      # run apart from the site, to look at them without playing the videos.
+      - name: Keep frames of the sample videos
+        run: |
+          mkdir -p sample-frames
+          for video in demo-dist/media/videos/*.mp4; do
+            name=$(basename "$video" .mp4)
+            length=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
+            cp "demo-dist/media/posters/$name.jpg" "sample-frames/$name-poster.jpg"
+            for share in 33 66; do
+              ffmpeg -nostdin -loglevel error -y -ss "$(awk "BEGIN { print $length * $share / 100 }")" -i "$video" \
+                -frames:v 1 -update 1 -q:v 3 "sample-frames/$name-$share.jpg"
+            done
+          done
+          cp demo-dist/media/people/*.jpg sample-frames/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sample-frames
+          path: sample-frames
+          if-no-files-found: error
+
+      # The documentation site has its own dependencies and its base at /<repository>/docs.
+      - name: Build the documentation
+        run: |
+          pnpm --dir docs install --frozen-lockfile
+          pnpm --dir docs exec astro build
+          cp -R docs/dist demo-dist/docs
+
+      # Pages answers an unknown path with 404.html, so every page of the app opens from its URL.
+      - run: cp demo-dist/index.html demo-dist/404.html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: demo-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,5 @@
+# The browser test is a project of its own, apart from the dependencies of albireo.
+# Supply-chain hardening: skip releases younger than a day, and accept dependencies
+# only from the npm registry. No dependency may run install scripts.
+minimumReleaseAge: 1440
+blockExoticSubdeps: true

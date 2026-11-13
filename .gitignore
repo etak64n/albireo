@@ -1,0 +1,14 @@
+node_modules/
+dist/
+demo-dist/
+
+# The secrets of the bucket, which compose.yaml reads
+.env
+.env.*
+!.env.example
+
+# Types that Astro generates for the documentation site
+.astro/
+
+# What the browser test writes
+test/browser/out/
