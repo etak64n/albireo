@@ -85,8 +85,9 @@ function PeopleSection() {
     setRemoving(null);
   }
 
+  // The table goes right under the title of the page, which names it already.
   return (
-    <Section title={t.people.people}>
+    <div className="grid min-w-0 content-start gap-4">
       {error !== "" ? (
         <p className="error-box">{error}</p>
       ) : (
@@ -170,7 +171,7 @@ function PeopleSection() {
       >
         {t.people.removeKeepsContent}
       </ConfirmDialog>
-    </Section>
+    </div>
   );
 }
 

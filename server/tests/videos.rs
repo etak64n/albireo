@@ -70,7 +70,7 @@ async fn uploads_a_video_in_parts_through_albireo(db: PgPool) {
     let admin = app.admin().await;
     let member = app.invite(&admin, "sam@example.com", "Sam", false).await;
 
-    let start = |content_type: &str, size: u64| json!({ "title": "Weekly sync", "fileName": "clip.MP4", "fileSize": size, "contentType": content_type });
+    let start = |content_type: &str, size: u64| json!({ "title": "Weekly sync", "fileName": "clip.MP4", "fileSize": size, "contentType": content_type, "seriesId": null });
     assert_eq!(
         app.post("/api/uploads", start("application/pdf", 10), &member).await.status,
         StatusCode::BAD_REQUEST
@@ -184,7 +184,7 @@ async fn uploads_a_video_in_parts_through_albireo(db: PgPool) {
 async fn cancels_an_upload(db: PgPool) {
     let app = TestApp::new(db);
     let admin = app.admin().await;
-    let body = json!({ "title": "Weekly sync", "fileName": "clip.mp4", "fileSize": 10, "contentType": "video/mp4" });
+    let body = json!({ "title": "Weekly sync", "fileName": "clip.mp4", "fileSize": 10, "contentType": "video/mp4", "seriesId": null });
     let id = app.post("/api/uploads", body, &admin).await.json()["videoId"]
         .as_str()
         .unwrap()
