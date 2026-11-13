@@ -42,8 +42,8 @@ export const VIDEO_SECONDS = {
 
 export type VideoFile = keyof typeof VIDEO_SECONDS;
 
-/** The pictures of the people, by the name of the file. The demo has one person, Alex. */
-export const PICTURE_FILES = ["alex"] as const;
+/** The people who chose a picture, by the name of its file. */
+export const PICTURE_FILES = ["alex", "mina", "daniel", "jonas", "kenji"] as const;
 
 export type PictureFile = (typeof PICTURE_FILES)[number];
 

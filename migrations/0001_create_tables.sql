@@ -1,186 +1,236 @@
--- The tables of albireo. albireo has no sign-in: everyone who opens it is the one person of
--- the users table, whom albireo adds when it starts for the first time.
+-- The tables of albireo in PostgreSQL.
+--
+-- Every time is a timestamptz that albireo writes to the millisecond, so that the cursors of
+-- the lists, which carry times as text, find their rows again. IDs are 16 random digits and
+-- lowercase letters, which albireo makes.
 
--- The person who uses albireo: the name, the bio, and the picture of their channel, and the
--- language of the app, such as 'en' or 'ja'. The server accepts only the languages that the
--- browser app has, so that a new language needs no change to the table.
+-- Search finds words inside titles and descriptions with trigram indexes, also in languages
+-- that do not put spaces between words, such as Japanese.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- The people who use albireo. The first admin comes from the setup, and everyone else from an
+-- invitation. A person whom an admin removed keeps their videos and comments, and cannot sign in.
 CREATE TABLE users (
-  id TEXT PRIMARY KEY,
-  display_name TEXT NOT NULL,
-  bio TEXT NOT NULL,
+  id text PRIMARY KEY,
+  -- In lowercase. Each person signs in with their email and their password.
+  email text NOT NULL UNIQUE,
+  -- Argon2id, in the PHC string format.
+  password_hash text NOT NULL,
+  display_name text NOT NULL,
+  bio text NOT NULL,
   -- The key of the picture in the bucket, or null for the default person icon.
-  avatar_key TEXT,
-  language TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  avatar_key text,
+  -- The language of the browser app, such as 'en' or 'ja'. The server accepts only the
+  -- languages that the browser app has, so that a new language needs no change to the table.
+  language text NOT NULL,
+  -- Admins edit everything, and invite and remove people.
+  is_admin boolean NOT NULL,
+  -- Sign-ins with a wrong password in a row. Too many lock the account for a while.
+  failed_sign_ins integer NOT NULL DEFAULT 0,
+  locked_until timestamptz,
+  removed_at timestamptz,
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL
+);
+
+-- One row for each browser where a person signed in. The ID is the SHA-256 of the token of
+-- the cookie, so the table never holds a token.
+CREATE TABLE sessions (
+  id text PRIMARY KEY,
+  user_id text NOT NULL REFERENCES users (id),
+  -- The browser and the operating system from the User-Agent header, or '' when albireo does not know them.
+  browser text NOT NULL,
+  os text NOT NULL,
+  created_at timestamptz NOT NULL,
+  -- The last request of the session, written at most once every five minutes.
+  last_seen_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL
+);
+
+CREATE INDEX sessions_of_user ON sessions (user_id, expires_at);
+
+-- Invitations that nobody has used yet. albireo deletes one when someone joins with it.
+CREATE TABLE invitations (
+  id text PRIMARY KEY,
+  -- The SHA-256 of the token of the link.
+  token_hash text NOT NULL UNIQUE,
+  is_admin boolean NOT NULL,
+  invited_by text NOT NULL REFERENCES users (id),
+  created_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL
+);
+
+-- While albireo has nobody, each server writes a setup code to its log and its SHA-256 here, so
+-- that the code of any server works with every server. The setup deletes them all.
+CREATE TABLE setup_codes (
+  code_hash text PRIMARY KEY,
+  created_at timestamptz NOT NULL
 );
 
 -- Series group videos as numbered episodes, such as the recordings of a course.
 CREATE TABLE series (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  owner_id TEXT NOT NULL REFERENCES users (id),
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  description text NOT NULL,
+  owner_id text NOT NULL REFERENCES users (id),
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL
 );
 
 CREATE INDEX series_updated_at ON series (updated_at DESC, id DESC);
+CREATE INDEX series_owner ON series (owner_id, updated_at DESC, id DESC);
 
--- Videos that albireo knows about.
--- A row starts as 'uploading' when the browser begins a multipart upload and
--- becomes 'ready' when the upload completes. A canceled upload deletes its row.
+-- Videos that albireo knows about. A row starts as 'uploading' when the browser begins a
+-- multipart upload, and becomes 'ready' when the upload completes. A canceled upload deletes its row.
 CREATE TABLE videos (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('uploading', 'ready')),
-  object_key TEXT NOT NULL,
-  upload_id TEXT,
-  content_type TEXT NOT NULL,
-  file_size INTEGER NOT NULL,
-  part_size INTEGER NOT NULL,
-  part_count INTEGER NOT NULL,
-  duration_sec REAL,
-  width INTEGER,
-  height INTEGER,
-  thumbnail_key TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  uploader_id TEXT REFERENCES users (id),
-  -- A video belongs to at most one series. series_position orders the episodes of a
-  -- series, and both columns are null when the video is in no series.
-  series_id TEXT REFERENCES series (id),
-  series_position INTEGER,
-  -- The number of ratings and their average, kept on the video, so that the list of all
-  -- videos sorts by rating from an index, reading one page of videos and no ratings.
-  -- RatingRepository counts them again whenever someone rates the video. rating_score is
-  -- the average stars times 1000, rounded down, and 0 for a video that nobody rated.
-  rating_count INTEGER NOT NULL DEFAULT 0,
-  rating_score INTEGER NOT NULL DEFAULT 0,
-  -- The number of comments and of attachments, which the lists of videos show on each one,
-  -- kept here so that a list reads no comments or attachments. The triggers below keep them.
-  comment_count INTEGER NOT NULL DEFAULT 0,
-  attachment_count INTEGER NOT NULL DEFAULT 0
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  description text NOT NULL,
+  status text NOT NULL CHECK (status IN ('uploading', 'ready')),
+  object_key text NOT NULL,
+  upload_id text,
+  content_type text NOT NULL,
+  file_size bigint NOT NULL,
+  part_size bigint NOT NULL,
+  part_count integer NOT NULL,
+  duration_sec double precision,
+  width integer,
+  height integer,
+  thumbnail_key text,
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL,
+  uploader_id text REFERENCES users (id),
+  -- A video belongs to at most one series. series_position orders the episodes of a series,
+  -- and both columns are null when the video is in no series.
+  series_id text REFERENCES series (id),
+  series_position integer,
+  -- The number of ratings and their average times 1000, rounded down, kept on the video, so
+  -- that the list of all videos sorts by rating from an index. The server counts them again
+  -- whenever someone rates the video.
+  rating_count integer NOT NULL DEFAULT 0,
+  rating_score integer NOT NULL DEFAULT 0,
+  -- The numbers of comments and of attachments, which the lists show on each video, kept here
+  -- so that a list reads no comments or attachments. The triggers below keep them.
+  comment_count integer NOT NULL DEFAULT 0,
+  attachment_count integer NOT NULL DEFAULT 0
 );
 
--- The library lists ready videos from the newest.
+-- The library lists ready videos from the newest, the videos of one person from the newest,
+-- the episodes of a series in their order, and the videos from the highest rated.
 CREATE INDEX videos_status_created_at ON videos (status, created_at DESC, id DESC);
 CREATE INDEX videos_uploader ON videos (uploader_id, status, created_at DESC, id DESC);
 CREATE INDEX videos_series ON videos (series_id, series_position);
 CREATE INDEX videos_status_rating ON videos (status, rating_score DESC, rating_count DESC, created_at DESC, id DESC);
 -- Home picks videos at random: from a random place among the IDs, which are random, the next
--- ready videos in the order of their IDs (VideoRepository.sampleReady). This index holds the
--- ready videos in that order, so a pick reads about one row for each video that it returns.
+-- ready videos in the order of their IDs.
 CREATE INDEX videos_status_id ON videos (status, id);
+-- Search looks up each word of three or more characters in the titles and the descriptions.
+CREATE INDEX videos_title_trigrams ON videos USING gin (title gin_trgm_ops);
+CREATE INDEX videos_description_trigrams ON videos USING gin (description gin_trgm_ops);
 
 -- The videos that each person watched: one row per person and video, with the last time.
 CREATE TABLE watch_history (
-  user_id TEXT NOT NULL REFERENCES users (id),
-  video_id TEXT NOT NULL REFERENCES videos (id),
-  watched_at TEXT NOT NULL,
+  user_id text NOT NULL REFERENCES users (id),
+  video_id text NOT NULL REFERENCES videos (id),
+  watched_at timestamptz NOT NULL,
   PRIMARY KEY (user_id, video_id)
 );
 
--- The history page lists the videos of one person from the last watched.
 CREATE INDEX watch_history_recent ON watch_history (user_id, watched_at DESC, video_id DESC);
+CREATE INDEX watch_history_by_video ON watch_history (video_id);
 
 -- What people write under a video. The video page lists them from the newest.
 CREATE TABLE comments (
-  id TEXT PRIMARY KEY,
-  video_id TEXT NOT NULL REFERENCES videos (id),
-  author_id TEXT NOT NULL REFERENCES users (id),
-  body TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  id text PRIMARY KEY,
+  video_id text NOT NULL REFERENCES videos (id),
+  author_id text NOT NULL REFERENCES users (id),
+  body text NOT NULL,
+  created_at timestamptz NOT NULL
 );
 
 CREATE INDEX comments_by_video ON comments (video_id, created_at DESC, id DESC);
 
 -- The stars that each person gave a video: one row per video and person.
 CREATE TABLE ratings (
-  video_id TEXT NOT NULL REFERENCES videos (id),
-  user_id TEXT NOT NULL REFERENCES users (id),
-  stars INTEGER NOT NULL CHECK (stars BETWEEN 1 AND 5),
-  rated_at TEXT NOT NULL,
+  video_id text NOT NULL REFERENCES videos (id),
+  user_id text NOT NULL REFERENCES users (id),
+  stars integer NOT NULL CHECK (stars BETWEEN 1 AND 5),
+  rated_at timestamptz NOT NULL,
   PRIMARY KEY (video_id, user_id)
 );
 
--- Files that go with a video, such as its slides or notes. The bucket keeps each file
--- under attachments/<video ID>/<attachment ID>; the database keeps its name for downloads.
--- A row is 'uploading' until the browser reports that the file is in the bucket.
+-- Files that go with a video, such as its slides or notes. The bucket keeps each file under
+-- attachments/<video ID>/<attachment ID>, and this table keeps its name for downloads. A row is
+-- 'uploading' until the browser reports that the file is in the bucket.
 CREATE TABLE attachments (
-  id TEXT PRIMARY KEY,
-  video_id TEXT NOT NULL REFERENCES videos (id),
-  file_name TEXT NOT NULL,
-  content_type TEXT NOT NULL,
-  file_size INTEGER NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('uploading', 'ready')),
-  created_at TEXT NOT NULL
+  id text PRIMARY KEY,
+  video_id text NOT NULL REFERENCES videos (id),
+  file_name text NOT NULL,
+  content_type text NOT NULL,
+  file_size bigint NOT NULL,
+  status text NOT NULL CHECK (status IN ('uploading', 'ready')),
+  created_at timestamptz NOT NULL
 );
 
 CREATE INDEX attachments_by_video ON attachments (video_id, created_at, id);
 
 -- Playlists are the lists of videos that a person makes, such as the talks to watch again.
--- Unlike a series, a playlist holds any videos, and a video can be in any number of
--- playlists. Each row of playlist_videos puts one video in one playlist; position orders
--- the videos of a playlist, from 1 for the first one added.
+-- Unlike a series, a playlist holds anyone's videos, and a video can be in any number of
+-- playlists. Each row of playlist_videos puts one video in one playlist; position orders the
+-- videos of a playlist, from 1 for the first one added.
 CREATE TABLE playlists (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  owner_id TEXT NOT NULL REFERENCES users (id),
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  description text NOT NULL,
+  owner_id text NOT NULL REFERENCES users (id),
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL
 );
 
 CREATE INDEX playlists_updated_at ON playlists (updated_at DESC, id DESC);
 CREATE INDEX playlists_owner ON playlists (owner_id, updated_at DESC, id DESC);
 
 CREATE TABLE playlist_videos (
-  playlist_id TEXT NOT NULL REFERENCES playlists (id),
-  video_id TEXT NOT NULL REFERENCES videos (id),
-  position INTEGER NOT NULL,
-  added_at TEXT NOT NULL,
+  playlist_id text NOT NULL REFERENCES playlists (id),
+  video_id text NOT NULL REFERENCES videos (id),
+  position integer NOT NULL,
+  added_at timestamptz NOT NULL,
   PRIMARY KEY (playlist_id, video_id)
 );
 
 CREATE INDEX playlist_videos_order ON playlist_videos (playlist_id, position);
 CREATE INDEX playlist_videos_by_video ON playlist_videos (video_id);
 
--- Search reads this copy of the title and the description of every video. The trigram
--- tokenizer indexes every run of three characters, so a query finds words inside longer
--- text, also in languages that do not put spaces between words, such as Japanese.
-CREATE VIRTUAL TABLE video_search USING fts5 (video_id UNINDEXED, title, description, tokenize = 'trigram');
+-- A comment counts when it is posted and stops counting when it is deleted.
+CREATE FUNCTION count_comments() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE videos SET comment_count = comment_count + 1 WHERE id = NEW.video_id;
+    RETURN NEW;
+  END IF;
+  UPDATE videos SET comment_count = comment_count - 1 WHERE id = OLD.video_id;
+  RETURN OLD;
+END
+$$;
 
--- The triggers keep the copy the same as the videos table.
-CREATE TRIGGER video_search_insert AFTER INSERT ON videos BEGIN
-  INSERT INTO video_search (video_id, title, description) VALUES (new.id, new.title, new.description);
-END;
+CREATE TRIGGER video_comment_count AFTER INSERT OR DELETE ON comments
+  FOR EACH ROW EXECUTE FUNCTION count_comments();
 
-CREATE TRIGGER video_search_update AFTER UPDATE OF title, description ON videos BEGIN
-  UPDATE video_search SET title = new.title, description = new.description WHERE video_id = old.id;
-END;
-
-CREATE TRIGGER video_search_delete AFTER DELETE ON videos BEGIN
-  DELETE FROM video_search WHERE video_id = old.id;
-END;
-
--- A comment counts when it is posted and stops counting when it is deleted. An attachment
--- counts when its upload is committed, and stops counting when it is removed; an attachment
--- that still uploads does not count.
-CREATE TRIGGER video_comment_count_insert AFTER INSERT ON comments BEGIN
-  UPDATE videos SET comment_count = comment_count + 1 WHERE id = new.video_id;
-END;
-
-CREATE TRIGGER video_comment_count_delete AFTER DELETE ON comments BEGIN
-  UPDATE videos SET comment_count = comment_count - 1 WHERE id = old.video_id;
-END;
+-- An attachment counts when its upload is committed, and stops counting when it is removed;
+-- an attachment that still uploads does not count.
+CREATE FUNCTION count_attachments() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    UPDATE videos SET attachment_count = attachment_count + 1 WHERE id = NEW.video_id;
+    RETURN NEW;
+  END IF;
+  UPDATE videos SET attachment_count = attachment_count - 1 WHERE id = OLD.video_id;
+  RETURN OLD;
+END
+$$;
 
 CREATE TRIGGER video_attachment_count_ready AFTER UPDATE OF status ON attachments
-  WHEN new.status = 'ready' AND old.status <> 'ready' BEGIN
-  UPDATE videos SET attachment_count = attachment_count + 1 WHERE id = new.video_id;
-END;
+  FOR EACH ROW WHEN (NEW.status = 'ready' AND OLD.status <> 'ready') EXECUTE FUNCTION count_attachments();
 
-CREATE TRIGGER video_attachment_count_delete AFTER DELETE ON attachments WHEN old.status = 'ready' BEGIN
-  UPDATE videos SET attachment_count = attachment_count - 1 WHERE id = old.video_id;
-END;
+CREATE TRIGGER video_attachment_count_delete AFTER DELETE ON attachments
+  FOR EACH ROW WHEN (OLD.status = 'ready') EXECUTE FUNCTION count_attachments();

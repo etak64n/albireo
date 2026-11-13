@@ -1,21 +1,22 @@
 ---
 title: "Overview"
-description: "A private video library in one Docker container, with videos in S3-compatible storage."
+description: "A private video library for a team, with videos in S3-compatible storage."
 ---
 
-albireo is a private video library that runs in one Docker container and keeps its files in an S3-compatible bucket.
-You upload, watch, rate, and comment on videos, group them in series and playlists, and attach files such as slides to them.
+albireo is a private video library for a team. A server in a Docker container keeps the library in PostgreSQL and the files in an S3-compatible bucket.
+People sign in to upload, watch, rate, and comment on videos, group them in series and playlists, and attach files such as slides to them.
 
 Try the [demo](/albireo/), which shows every page with sample data in your browser.
 
 ## In short
 
-- albireo is one container that serves a browser app and an API on port 8080. A SQLite database in the volume of the container holds the library: videos, series, playlists, comments, ratings, the watch history, attachments, and a search index.
-- The bucket holds the files: the videos as you uploaded them, their thumbnails, the picture of your channel, and the attachments. Every file passes through albireo, so the browser talks to albireo alone, and the bucket needs no CORS rules.
-- albireo has no sign-in. Everyone who reaches it is its one person, who can do everything. Run it where only you can reach it, or behind a proxy that signs people in.
-- The settings are six environment variables that name the bucket and its access key.
+- albireo is a container that serves a browser app and an API on port 8080. It keeps nothing of its own, so several containers can serve one library, for a server that stays up while another restarts, or for more people at once.
+- PostgreSQL holds the library: the people and their sessions, the videos, series, playlists, comments, ratings, the watch history, and the attachments.
+- The bucket holds the files: the videos as people uploaded them, their thumbnails, the pictures of the channels, and the attachments. Every file passes through albireo, so the browser talks to albireo alone, and the bucket needs no CORS rules.
+- People sign in with an email and a password. The first admin signs up with a setup code from the log of albireo, and admins invite everyone else with a link.
+- The settings are seven environment variables: the database, the bucket, and its access key.
 
-A typical use is keeping your own recordings, such as meeting or lecture recordings with their slides, in one private place.
+A typical use is a team that keeps its recordings, such as meetings, talks, and lectures with their slides, in one private place.
 
 ## Features
 
@@ -30,5 +31,4 @@ albireo has these features.
 7. [Ratings and comments](guides/ratings-and-comments/)
 8. [Attachments](guides/attachments/)
 9. [Channel and account](guides/channels/)
-
-[One person, no sign-in](guides/one-person/) describes who albireo serves, and how to keep others out.
+10. [People and sign-in](guides/people/)

@@ -10,3 +10,4 @@ images
 scripts
 test
 *.md
+server/target

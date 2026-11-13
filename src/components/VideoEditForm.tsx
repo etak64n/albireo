@@ -14,8 +14,9 @@ import { useToast } from "./ui/toast.tsx";
 
 /**
  * The title, the series, and the description of a video on its page. Beside the title, Add to
- * playlist puts the video in the playlists, Add to series puts it in a series, and a small
- * pencil opens the edit page of the video. The series leads to its page.
+ * playlist puts the video in the playlists of the signed-in person. For the uploader of the video
+ * and admins, Add to series puts it in a series, and a small pencil opens the edit page of the
+ * video. The series leads to its page.
  */
 export function VideoTitle({ video, onChange }: { video: VideoDetail; onChange: (video: VideoDetail) => void }) {
   const t = useT();

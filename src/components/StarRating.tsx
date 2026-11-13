@@ -13,7 +13,7 @@ const STARS = Array.from({ length: RATING_MAX_STARS }, (_, index) => index + 1);
 
 
 /**
- * The stars that the person gives a video, and beside them everyone's average
+ * The stars that the signed-in person gives a video, and beside them everyone's average
  * and the number of ratings, once someone rated it.
  * The stars are radio buttons, so the arrow keys move between them as well. A change shows at
  * once and saves behind: the answer of the API, which counts everyone's stars, takes its place,

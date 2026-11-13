@@ -1,6 +1,7 @@
 # Checks albireo on every push to main and every pull request: the types, the tests, and the
-# build of the browser app; the Docker image, which test/e2e.sh runs end to end with a
-# bucket on amd64 and arm64; and the browser app of the image in Google Chrome, through
+# build of the browser app; the format, the lints, and the tests of the server, against
+# PostgreSQL; the Docker image, which test/e2e.sh runs end to end with a database and a bucket
+# on amd64 and arm64; and the browser app of the image in Google Chrome, through
 # test/browser/run.sh.
 name: CI
 
@@ -13,8 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
+  app:
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -35,6 +36,49 @@ jobs:
 
       - run: pnpm exec vite build
 
+  server:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # Each test of the API makes a database of its own in this PostgreSQL, and drops it after.
+    services:
+      postgres:
+        image: postgres:18.7
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready --username postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v7
+
+      # The Rust that mise.toml names, as on the machines of the developers.
+      - name: Install Rust
+        working-directory: .
+        run: |
+          version=$(sed -nE 's/^rust = \{ version = "([^"]+)".*/\1/p' mise.toml)
+          rustup toolchain install "$version" --profile minimal --component clippy,rustfmt
+          rustup default "$version"
+
+      # Keeps the dependencies that cargo built, so that a run builds only albireo again.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+
+      - run: cargo fmt --check
+
+      - run: cargo clippy --all-targets --locked -- --deny warnings
+
+      - run: cargo test --locked
+
   # The image on both architectures that it ships for, each on a runner of its own.
   e2e:
     name: e2e (${{ matrix.platform }})
@@ -47,13 +91,14 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v4
 
-      # CI keeps a cache for each architecture. Releases build without it.
+      # CI keeps a cache for each architecture, which holds the dependencies that cargo built.
+      # Releases build without it.
       - uses: docker/build-push-action@v7
         with:
           context: .
@@ -68,7 +113,7 @@ jobs:
   # amd64 alone, and the browser app is the same JavaScript on every architecture.
   browser:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
 

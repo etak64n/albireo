@@ -1,8 +1,8 @@
 # Publishes the image to ghcr.io/etak64n/albireo for every tag v*, for amd64 and arm64.
-# The tag must name the version in package.json. Each architecture builds on a runner of
-# its own, which is far faster than emulation, and runs the end-to-end tests there. A job
-# joins the images that passed under one tag, and the last one publishes the GitHub release
-# of the tag.
+# The tag must name the version in package.json and in server/Cargo.toml. Each
+# architecture builds on a runner of its own, which is far faster than emulation, and runs
+# the end-to-end tests there. A job joins the images that passed under one tag, and the
+# last one publishes the GitHub release of the tag.
 name: Release
 
 on:
@@ -32,11 +32,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Check the tag against package.json
+      - name: Check the tag against package.json and server/Cargo.toml
         run: |
           version=$(jq -r .version package.json)
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then
             echo "The tag $GITHUB_REF_NAME does not match the version $version in package.json." >&2
+            exit 1
+          fi
+          server_version=$(sed -nE 's/^version = "([^"]+)"/\1/p' server/Cargo.toml | head -n 1)
+          if [ "$GITHUB_REF_NAME" != "v$server_version" ]; then
+            echo "The tag $GITHUB_REF_NAME does not match the version $server_version in server/Cargo.toml." >&2
             exit 1
           fi
 

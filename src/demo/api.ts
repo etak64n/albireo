@@ -1,10 +1,11 @@
 // Answers of the albireo API for the demo on GitHub Pages, from the made-up library of
-// data.ts, so that the demo shows the real screens without the server or a bucket.
-// Changes, such as a rating, a comment, a new series or playlist, or the language, stay in
-// memory until the page reloads. The videos, the pictures, and the attachments are files
-// beside the demo (media.ts), with their sizes in a list beside them, and the demo keeps no
-// files of its own, so uploads fail with a short message. Only the demo build imports this
-// file (src/api.ts).
+// data.ts, so that the demo shows the real screens without the server, a database, or a
+// bucket. Changes, such as a rating, a comment, a new series or playlist, the language, a role,
+// or an invitation, stay in memory until the page reloads. The videos, the pictures, and the
+// attachments are files beside the demo (media.ts), with their sizes in a list beside them,
+// and the demo keeps no files of its own, so uploads fail with a short message. The demo
+// signs in with any email and password, and makes no accounts. Only the demo build imports
+// this file (src/api.ts).
 
 import {
   BIO_MAX_LENGTH,
@@ -15,19 +16,28 @@ import {
   isVideoSort,
   LANGUAGES,
   LIST_PAGE_SIZE,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
   RATING_MAX_STARS,
   SEARCH_QUERY_MAX_LENGTH,
   TITLE_MAX_LENGTH,
   VIDEO_SORTS,
   type CommentResponse,
+  type CreateInvitationResponse,
   type EpisodeLink,
   type HistoryResponse,
+  type Invitation,
+  type JoinInfoResponse,
   type ListCommentsResponse,
+  type ListInvitationsResponse,
+  type ListPeopleResponse,
   type ListPlaylistsResponse,
   type ListSeriesResponse,
   type ListVideosResponse,
   type Me,
   type MeResponse,
+  type Person,
+  type PersonResponse,
   type PlaylistChoicesResponse,
   type PlaylistDetail,
   type PlaylistResponse,
@@ -39,6 +49,7 @@ import {
   type SeriesDetail,
   type SeriesResponse,
   type SeriesSummary,
+  type SessionsResponse,
   type UserProfile,
   type UserResponse,
   type UserSummary,
@@ -51,12 +62,25 @@ import {
   type VideoSummary,
 } from "../../shared/api.ts";
 import { ApiError } from "../api.ts";
-import { createLibrary, type DemoAttachment, type DemoComment, type DemoPerson, type DemoPlaylist, type DemoSeries, type DemoVideo } from "./data.ts";
+import {
+  createLibrary,
+  type DemoAttachment,
+  type DemoComment,
+  type DemoInvitation,
+  type DemoPerson,
+  type DemoPlaylist,
+  type DemoSeries,
+  type DemoVideo,
+} from "./data.ts";
 import { ATTACHMENT_FILES, MEDIA_PATHS, VIDEO_SECONDS } from "./media.ts";
 
 const library = createLibrary(new Date());
 
 const NO_FILES = "The demo does not keep files, so uploads are off.";
+const NO_ACCOUNTS = "The demo makes no accounts. Its invitation links show the page of an invitation only.";
+const INVITATION_MS = 7 * 24 * 3_600_000;
+// The tokens of the invitations made in the demo, for the page of their links.
+const invitationTokens = new Map<string, string>();
 // Every sample video is 720p.
 const SAMPLE_WIDTH = 1280;
 const SAMPLE_HEIGHT = 720;
@@ -85,12 +109,28 @@ const route = (method: string, path: string, answer: (request: DemoRequest) => u
   ({ method, path: new RegExp(`^${path.replaceAll(":id", ID)}$`), answer }) as const;
 
 const ROUTES = [
+  // The demo signs in with any email and password, as the one person who is signed in.
+  route("POST", "/api/sign-in", () => ({ me: me() }) satisfies MeResponse),
+  route("POST", "/api/sign-out", () => undefined),
+  route("GET", "/api/join/([A-Za-z0-9_-]+)", ({ ids: [token = ""] }) => joinInfo(token)),
+  route("POST", "/api/join/([A-Za-z0-9_-]+)", () => {
+    throw new ApiError(403, "demo_makes_no_accounts", NO_ACCOUNTS);
+  }),
   route("GET", "/api/me", () => ({ me: me() }) satisfies MeResponse),
   route("PATCH", "/api/me", ({ body }) => updateMe(body)),
   route("POST", "/api/me/avatar", noFiles),
   route("POST", "/api/me/avatar/commit", noFiles),
   route("DELETE", "/api/me/avatar", () => removePicture()),
+  route("POST", "/api/me/password", ({ body }) => changePassword(body)),
+  route("GET", "/api/me/sessions", () => ({ sessions: library.sessions }) satisfies SessionsResponse),
+  route("DELETE", "/api/me/sessions/:id", ({ ids: [id = ""] }) => endSession(id)),
   route("GET", "/api/users/:id", ({ ids: [id = ""] }) => ({ user: profile(findPerson(id)) }) satisfies UserResponse),
+  route("GET", "/api/people", () => listPeople()),
+  route("PATCH", "/api/people/:id", ({ ids: [id = ""], body }) => updatePerson(id, body)),
+  route("DELETE", "/api/people/:id", ({ ids: [id = ""] }) => removePerson(id)),
+  route("GET", "/api/invitations", () => listInvitations()),
+  route("POST", "/api/invitations", ({ body }) => createInvitation(body)),
+  route("DELETE", "/api/invitations/:id", ({ ids: [id = ""] }) => deleteInvitation(id)),
   route("GET", "/api/history", ({ query }) => history(query.get("cursor"))),
   route("GET", "/api/recommendations", () => ({ videos: recommend().map(summary) }) satisfies RecommendationsResponse),
   // Before /api/videos/:id, which would take "random" for an ID.
@@ -226,11 +266,128 @@ function profile(person: DemoPerson): UserProfile {
 }
 
 function me(): Me {
+  const person = findPerson(library.me.id);
+  return { ...profile(person), email: person.email, isAdmin: person.isAdmin, joinedAt: person.joinedAt, language: library.me.language };
+}
+
+function isAdmin(): boolean {
+  return findPerson(library.me.id).isAdmin;
+}
+
+function requireAdmin(what: string): void {
+  if (!isAdmin()) throw new ApiError(403, "forbidden", `Only admins can ${what}.`);
+}
+
+/** Checks the new password as the server does. The demo has no password, so any current one is right. */
+function changePassword(body: Fields): undefined {
+  readText(body, "currentPassword", 0, PASSWORD_MAX_LENGTH * 4, false);
+  const password = readText(body, "newPassword", 0, PASSWORD_MAX_LENGTH * 4, false);
+  if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) {
+    throw badRequest(`newPassword must be ${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters long.`);
+  }
+  // A new password ends the sessions of the other browsers.
+  library.sessions = library.sessions.filter((session) => session.current);
+  return undefined;
+}
+
+function endSession(id: string): undefined {
+  const session = library.sessions.find((candidate) => candidate.id === id);
+  if (session === undefined) throw notFound("No session of yours has this ID.");
+  // The demo keeps the session of this browser, so that the demo stays signed in.
+  if (!session.current) library.sessions = library.sessions.filter((other) => other.id !== id);
+  return undefined;
+}
+
+function person(record: DemoPerson): Person {
   return {
-    ...profile(findPerson(library.me.id)),
-    joinedAt: library.me.joinedAt,
-    language: library.me.language,
+    ...personSummary(record.id),
+    email: record.email,
+    isAdmin: record.isAdmin,
+    joinedAt: record.joinedAt,
+    lastActiveAt: record.lastActiveAt,
   };
+}
+
+function listPeople(): ListPeopleResponse {
+  requireAdmin("see the people of albireo");
+  return { people: library.people.filter((record) => !record.removed).map(person) };
+}
+
+/** Changes the role of a person, as the server does: albireo keeps at least one admin. */
+function updatePerson(id: string, body: Fields): PersonResponse {
+  requireAdmin("change who is an admin");
+  const record = findPerson(id);
+  if (record.removed) throw notFound("No person has this ID.");
+  const value = body["isAdmin"];
+  if (typeof value !== "boolean") throw badRequest("isAdmin must be true or false.");
+  const admins = library.people.filter((other) => other.isAdmin && !other.removed);
+  if (!value && record.isAdmin && admins.length === 1) {
+    throw new ApiError(409, "conflict", "albireo needs at least one admin. Make someone else an admin first.");
+  }
+  record.isAdmin = value;
+  return { person: person(record) };
+}
+
+/** Removes a person, as the server does: their videos, comments, series, and playlists stay. */
+function removePerson(id: string): undefined {
+  requireAdmin("remove people");
+  if (id === library.me.id) throw new ApiError(409, "conflict", "You cannot remove yourself. Another admin can.");
+  const record = findPerson(id);
+  if (record.removed) throw notFound("No person has this ID.");
+  const admins = library.people.filter((other) => other.isAdmin && !other.removed);
+  if (record.isAdmin && admins.length === 1) {
+    throw new ApiError(409, "conflict", "albireo needs at least one admin. Make someone else an admin first.");
+  }
+  record.removed = true;
+  return undefined;
+}
+
+function invitation(record: DemoInvitation): Invitation {
+  return {
+    id: record.id,
+    isAdmin: record.isAdmin,
+    invitedBy: personSummary(record.invitedById),
+    createdAt: record.createdAt,
+    expiresAt: record.expiresAt,
+  };
+}
+
+function listInvitations(): ListInvitationsResponse {
+  requireAdmin("see the invitations");
+  return { invitations: library.invitations.map(invitation) };
+}
+
+/** Makes an invitation. Its link opens the page of the invitation in the demo, which makes no account. */
+function createInvitation(body: Fields): CreateInvitationResponse {
+  requireAdmin("invite people");
+  const value = body["isAdmin"];
+  if (typeof value !== "boolean") throw badRequest("isAdmin must be true or false.");
+  const record: DemoInvitation = {
+    id: newId(),
+    isAdmin: value,
+    invitedById: library.me.id,
+    createdAt: now(),
+    expiresAt: new Date(Date.now() + INVITATION_MS).toISOString(),
+  };
+  library.invitations.unshift(record);
+  const token = newId() + newId();
+  invitationTokens.set(token, record.id);
+  return { invitation: invitation(record), token };
+}
+
+function deleteInvitation(id: string): undefined {
+  requireAdmin("delete invitations");
+  if (!library.invitations.some((record) => record.id === id)) throw notFound("No invitation has this ID.");
+  library.invitations = library.invitations.filter((record) => record.id !== id);
+  return undefined;
+}
+
+function joinInfo(token: string): JoinInfoResponse {
+  const record = library.invitations.find((candidate) => candidate.id === invitationTokens.get(token));
+  if (record === undefined) {
+    throw notFound("This invitation does not work: someone used it, it expired, or an admin deleted it. Ask an admin for a new one.");
+  }
+  return { invitation: { isAdmin: record.isAdmin, invitedBy: findPerson(record.invitedById).displayName, expiresAt: record.expiresAt } };
 }
 
 function updateMe(body: Fields): MeResponse {
@@ -253,6 +410,13 @@ function removePicture(): MeResponse {
   return { me: me() };
 }
 
+function canEditVideo(video: DemoVideo): boolean {
+  return isAdmin() || video.uploaderId === library.me.id;
+}
+
+function canEditSeries(series: DemoSeries): boolean {
+  return isAdmin() || series.ownerId === library.me.id;
+}
 
 function summary(video: DemoVideo): VideoSummary {
   const series = library.series.find((item) => item.id === video.seriesId);
@@ -290,8 +454,7 @@ function detail(video: DemoVideo): VideoDetail {
     series: placeInSeries(video),
     rating: ratingOf(video.id),
     attachments: video.attachments.map(attachment),
-    // The one person of albireo edits everything, as the server answers.
-    canEdit: true,
+    canEdit: canEditVideo(video),
   };
 }
 
@@ -315,7 +478,7 @@ function newestFirst(): DemoVideo[] {
   return [...library.videos].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || (a.id < b.id ? 1 : -1));
 }
 
-/** Lists the videos in the order that the server uses for the sort (server/videos.ts). */
+/** Lists the videos in the order that the server uses for the sort (server/src/repo/videos.rs). */
 function listVideos(uploaderId: string | null, cursor: string | null, sort: string): ListVideosResponse {
   if (!isVideoSort(sort)) throw badRequest(`sort must be one of ${VIDEO_SORTS.join(", ")}.`);
   if (uploaderId !== null && sort !== "newest") throw badRequest("The videos of one person list from the newest only.");
@@ -361,7 +524,7 @@ function recordWatch(id: string): undefined {
 }
 
 /**
- * The order of the home page, as the server makes it (recommend in server/app.ts): the
+ * The order of the home page, as the server makes it (recommend in server/src/api/videos.rs): the
  * next episode of each series that Alex is watching, then the videos that they did not
  * watch, those of familiar series and uploaders first, then the videos that they watched,
  * from the one watched longest ago.
@@ -425,6 +588,7 @@ function search(query: string, cursor: string | null): SearchResponse {
 
 function updateVideo(id: string, body: Fields): VideoResponse {
   const video = findVideo(id);
+  if (!canEditVideo(video)) throw new ApiError(403, "forbidden", "Only the uploader of the video or an admin can edit it.");
   const title = "title" in body ? readText(body, "title", 1, TITLE_MAX_LENGTH, true) : video.title;
   const description = "description" in body ? readText(body, "description", 0, DESCRIPTION_MAX_LENGTH, false) : video.description;
   const time = now();
@@ -475,12 +639,13 @@ function clearRating(id: string): RatingResponse {
 }
 
 function toComment(comment: DemoComment): VideoComment {
+  const video = library.videos.find((candidate) => candidate.id === comment.videoId);
   return {
     id: comment.id,
     body: comment.body,
     createdAt: comment.createdAt,
     author: personSummary(comment.authorId),
-    canDelete: true,
+    canDelete: isAdmin() || comment.authorId === library.me.id || video?.uploaderId === library.me.id,
   };
 }
 
@@ -503,6 +668,7 @@ function addComment(videoId: string, body: Fields): CommentResponse {
 // The demo keeps no files, so deleting a video forgets it and everything that points at it.
 function deleteVideo(id: string): undefined {
   const video = findVideo(id);
+  if (!canEditVideo(video)) throw new ApiError(403, "forbidden", "Only the uploader of the video or an admin can delete it.");
   library.videos = library.videos.filter((item) => item.id !== video.id);
   library.comments = library.comments.filter((item) => item.videoId !== video.id);
   library.ratings = library.ratings.filter((item) => item.videoId !== video.id);
@@ -516,6 +682,9 @@ function deleteVideo(id: string): undefined {
 function deleteComment(id: string): undefined {
   const comment = library.comments.find((candidate) => candidate.id === id);
   if (comment === undefined) throw notFound("No comment has this ID.");
+  if (!toComment(comment).canDelete) {
+    throw new ApiError(403, "forbidden", "Only the author of the comment, the uploader of the video, or an admin can delete it.");
+  }
   library.comments = library.comments.filter((candidate) => candidate.id !== id);
   return undefined;
 }
@@ -523,6 +692,7 @@ function deleteComment(id: string): undefined {
 function removeAttachment(id: string): undefined {
   const video = library.videos.find((candidate) => candidate.attachments.some((item) => item.id === id));
   if (video === undefined) throw notFound("No attachment has this ID.");
+  if (!canEditVideo(video)) throw new ApiError(403, "forbidden", "Only the uploader of the video or an admin can change its attachments.");
   video.attachments = video.attachments.filter((item) => item.id !== id);
   return undefined;
 }
@@ -562,7 +732,7 @@ function seriesDetail(series: DemoSeries): SeriesDetail {
     owner: personSummary(series.ownerId),
     createdAt: series.createdAt,
     updatedAt: series.updatedAt,
-    canEdit: true,
+    canEdit: canEditSeries(series),
     episodes: episodesOf(series.id).map((video, index) => ({ ...summary(video), episode: index + 1 })),
   };
 }
@@ -591,6 +761,7 @@ function createSeries(body: Fields): SeriesResponse {
 
 function updateSeries(id: string, body: Fields): SeriesResponse {
   const series = findSeries(id);
+  if (!canEditSeries(series)) throw new ApiError(403, "forbidden", "Only the creator of the series or an admin can edit it.");
   if ("title" in body) series.title = readText(body, "title", 1, TITLE_MAX_LENGTH, true);
   if ("description" in body) series.description = readText(body, "description", 0, DESCRIPTION_MAX_LENGTH, false);
   series.updatedAt = now();
@@ -601,6 +772,7 @@ function moveEpisode(seriesId: string, videoId: string, body: Fields): SeriesRes
   const series = findSeries(seriesId);
   const direction = body["direction"];
   if (direction !== "earlier" && direction !== "later") throw badRequest('direction must be "earlier" or "later".');
+  if (!canEditSeries(series)) throw new ApiError(403, "forbidden", "Only the creator of the series or an admin can reorder it.");
   const episodes = episodesOf(series.id);
   const index = episodes.findIndex((episode) => episode.id === videoId);
   const episode = episodes[index];
@@ -615,6 +787,7 @@ function moveEpisode(seriesId: string, videoId: string, body: Fields): SeriesRes
 /** Deletes a series, as the server does: its videos stay in the library, out of any series. */
 function deleteSeries(id: string): undefined {
   const series = findSeries(id);
+  if (!canEditSeries(series)) throw new ApiError(403, "forbidden", "Only the creator of the series or an admin can delete it.");
   const time = now();
   for (const video of library.videos) {
     if (video.seriesId !== series.id) continue;
@@ -630,6 +803,9 @@ function removeEpisode(seriesId: string, videoId: string): SeriesResponse {
   const series = findSeries(seriesId);
   const video = findVideo(videoId);
   if (video.seriesId !== series.id) throw notFound("The series has no episode with this ID.");
+  if (!canEditSeries(series) && !canEditVideo(video)) {
+    throw new ApiError(403, "forbidden", "Only the creator of the series, the uploader of the video, or an admin can take it out.");
+  }
   const time = now();
   video.seriesId = null;
   video.seriesPosition = null;
@@ -638,6 +814,9 @@ function removeEpisode(seriesId: string, videoId: string): SeriesResponse {
   return { series: seriesDetail(series) };
 }
 
+function canEditPlaylist(playlist: DemoPlaylist): boolean {
+  return isAdmin() || playlist.ownerId === library.me.id;
+}
 
 /** The videos of a playlist, in their order, without the ones that the library no longer has. */
 function videosOf(playlist: DemoPlaylist): DemoVideo[] {
@@ -663,7 +842,7 @@ function playlistDetail(playlist: DemoPlaylist): PlaylistDetail {
     owner: personSummary(playlist.ownerId),
     createdAt: playlist.createdAt,
     updatedAt: playlist.updatedAt,
-    canEdit: true,
+    canEdit: canEditPlaylist(playlist),
     videos: videosOf(playlist).map((video, index) => ({ ...summary(video), position: index + 1 })),
   };
 }
@@ -678,7 +857,7 @@ function listPlaylists(ownerId: string | null): ListPlaylistsResponse {
   return { playlists: playlists.map(playlistSummary) };
 }
 
-/** The playlists of the person, each with whether it holds the video. */
+/** The playlists of the signed-in person, each with whether it holds the video. */
 function playlistChoices(videoId: string): PlaylistChoicesResponse {
   const video = findVideo(videoId);
   const mine = newestPlaylistsFirst().filter((item) => item.ownerId === library.me.id);
@@ -702,6 +881,7 @@ function createPlaylist(body: Fields): PlaylistResponse {
 
 function editablePlaylist(id: string, action: string): DemoPlaylist {
   const playlist = findPlaylist(id);
+  if (!canEditPlaylist(playlist)) throw new ApiError(403, "forbidden", `Only the owner of the playlist or an admin can ${action} it.`);
   return playlist;
 }
 

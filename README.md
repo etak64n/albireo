@@ -5,7 +5,7 @@
   </picture>
 </h1>
 
-<p align="center">albireo is a private video library in one Docker container, with your videos in S3-compatible storage.</p>
+<p align="center">albireo is a private video library for a team, with your videos in S3-compatible storage.</p>
 
 <p align="center">
   <a href="https://github.com/etak64n/albireo/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/etak64n/albireo/actions/workflows/ci.yml/badge.svg" /></a>
@@ -21,19 +21,21 @@
   · <a href="https://github.com/etak64n/albireo/releases">Releases</a>
 </p>
 
-Upload, watch, rate, and comment on your videos, group them in series and playlists, and attach files such as slides to them. The videos stay in your bucket as you uploaded them, and the only settings are the bucket and its access key. The app speaks English or Japanese.
+Upload, watch, rate, and comment on videos together, group them in series and playlists, and attach files such as slides to them. The videos stay in your bucket as you uploaded them, and the only settings are the database, the bucket, and its access key. The app speaks English or Japanese.
 
 ## How it works
 
 ```
-  Browser  ──── HTTP ────▶  albireo container  ──── S3 API ────▶  Bucket
-  pages, the player,        server on port 8080                   videos, thumbnails,
-  uploads                   SQLite in a volume                    pictures, attachments
+  Browser ── HTTPS ──▶ albireo containers ──────▶ PostgreSQL
+  pages, the player,   server on port 8080         people, sessions, the library
+  uploads                       │
+                                └──── S3 API ────▶ Bucket
+                                                   videos, thumbnails, pictures, attachments
 ```
 
-- The container serves the app and its API, and keeps the library in a SQLite database in its volume: the titles, series, playlists, comments, ratings, history, and a search index.
-- Every file passes through the container, so the browser talks to albireo alone. The bucket needs no CORS rules, and the access key stays on the server.
-- albireo has no sign-in. Run it where only you can reach it, such as on localhost or a private network, or behind a proxy that signs people in.
+- A container serves the app and its API, and keeps nothing of its own: the library is in PostgreSQL, and the files are in the bucket. Run one container, or several for a library that stays up while one restarts.
+- Every file passes through albireo, so the browser talks to albireo alone. The bucket needs no CORS rules, and the access key stays on the server.
+- People sign in with an email and a password. The first admin signs up with a setup code from the log of albireo, and admins invite everyone else with a link. Members edit what they made, and admins edit everything.
 
 ## Features
 
@@ -74,13 +76,13 @@ You need Docker with Docker Compose, an empty bucket at an S3-compatible storage
 1. Download compose.yaml and .env.example, and copy .env.example to .env.
 
    ```bash
-   # Download the example settings, and make .env for the access key
+   # Download the example settings, and make .env for the secrets
    curl -fsSLO https://raw.githubusercontent.com/etak64n/albireo/main/compose.yaml
    curl -fsSLO https://raw.githubusercontent.com/etak64n/albireo/main/.env.example
    cp .env.example .env
    ```
 
-2. In compose.yaml, replace the endpoint, the region, the bucket, and the URL style with those of your bucket, and write the access key in .env.
+2. In compose.yaml, replace the endpoint, the region, the bucket, and the URL style with those of your bucket. In .env, write a password for the database and the access key.
 
    ```yaml
    # compose.yaml: the bucket of albireo
@@ -91,23 +93,29 @@ You need Docker with Docker Compose, an empty bucket at an S3-compatible storage
    ```
 
    ```dotenv
-   # .env: the access key of the bucket
+   # .env: the password of the database, such as the output of `openssl rand -hex 24`, and the access key of the bucket
+   POSTGRES_PASSWORD=a-password-of-letters-and-digits
    S3_ACCESS_KEY_ID=your-access-key-id
    S3_SECRET_ACCESS_KEY=your-secret-access-key
    ```
 
-3. Start albireo, and open http://localhost:8080.
+3. Start albireo and PostgreSQL, and read the setup code of the first admin from the log.
 
    ```bash
-   # Start albireo in the background
+   # Start albireo and its database in the background
    docker compose up -d
+
+   # Show the line of the log that holds the setup code
+   docker compose logs albireo | grep setupCode
    ```
 
-When a setting is wrong, albireo stops at once, and `docker compose logs albireo` says what to change. To try albireo without a bucket of your own, see the [quick start with a local bucket](https://etak64n.github.io/albireo/docs/getting-started/quickstart/).
+4. Open http://localhost:8080, and create the first admin with the setup code.
+
+When a setting is wrong, albireo stops at once, and `docker compose logs albireo` says what to change. compose.yaml publishes albireo on this machine alone: to reach it from other devices, put a proxy with HTTPS in front of it, as the [deployment guide](https://etak64n.github.io/albireo/docs/getting-started/deploy/) describes. To try albireo without a bucket of your own, see the [quick start with a local bucket](https://etak64n.github.io/albireo/docs/getting-started/quickstart/).
 
 ## Documentation
 
-The [documentation](https://etak64n.github.io/albireo/docs/) covers the deployment behind a proxy, every setting, updates and backups, each feature, and how albireo works.
+The [documentation](https://etak64n.github.io/albireo/docs/) covers the deployment behind a proxy with HTTPS, several containers, every setting, updates and backups, people and sign-in, each feature, and how albireo works.
 
 ## License
 

@@ -1,5 +1,5 @@
 {
-  // Browser app. The Worker and the Node.js files have their own tsconfig files.
+  // Browser app. The scripts and the tests that run in Node.js have their own tsconfig file.
   "compilerOptions": {
     "target": "ES2023",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],

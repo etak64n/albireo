@@ -1,29 +1,44 @@
-// Uses a running albireo in Google Chrome the way its person does: it uploads a clip through
-// the page, plays it and moves in it, comments with a time, attaches notes and opens their
-// preview, picks a frame for the thumbnail, searches, renames the channel, and looks at the
-// account page and at a page on a phone. It saves a screenshot of each step, and fails on an
-// error in a page, a request that fails, and anything that the Content-Security-Policy blocks.
+// Uses a running albireo in Google Chrome the way its people do: it creates the first admin
+// with the setup code, uploads a clip through the page, plays it and moves in it, comments
+// with a time, attaches notes and opens their preview, picks a frame for the thumbnail,
+// searches, renames the channel, and changes the password on the account page. It then makes
+// an invitation link, which a member opens in a browser of their own to join, logs the member
+// out and in again, and looks at a page on a phone. It saves a screenshot of each step, and
+// fails on an error in a page, a request that fails, and anything that the
+// Content-Security-Policy blocks.
 //
-// Usage: node app.mjs <albireo URL> <clip .mp4> <notes .md> <folder for screenshots>
+// Usage: node app.mjs <albireo URL> <setup code> <clip .mp4> <notes .md> <folder for screenshots>
 
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 
-const [base, clip, notes, out] = process.argv.slice(2);
-if (!base || !clip || !notes || !out) throw new Error("usage: node app.mjs <albireo URL> <clip> <notes> <screenshots>");
+const [base, setupCode, clip, notes, out] = process.argv.slice(2);
+if (!base || !setupCode || !clip || !notes || !out) {
+  throw new Error("usage: node app.mjs <albireo URL> <setup code> <clip> <notes> <screenshots>");
+}
 await mkdir(out, { recursive: true });
 
 // What went wrong in any page, reported at the end so that every screenshot is taken.
 const problems = [];
+
+// The app asks who is signed in when it opens, which a browser without a session answers with 401.
+function isSignedOutCheck(url, status) {
+  return status === 401 && url !== "" && new URL(url).pathname === "/api/me";
+}
+
 function watch(page) {
   page.on("console", (message) => {
-    if (message.type() === "error") problems.push(`console error on ${page.url()}: ${message.text()}`);
+    if (message.type() !== "error") return;
+    if (message.text().includes("status of 401") && isSignedOutCheck(message.location().url ?? "", 401)) return;
+    problems.push(`console error on ${page.url()}: ${message.text()}`);
   });
   page.on("pageerror", (error) => problems.push(`page error on ${page.url()}: ${error.message}`));
   page.on("response", (response) => {
-    if (response.status() >= 400) problems.push(`${response.status()} for ${response.request().method()} ${response.url()}`);
+    if (response.status() >= 400 && !isSignedOutCheck(response.url(), response.status())) {
+      problems.push(`${response.status()} for ${response.request().method()} ${response.url()}`);
+    }
     // A picture whose URL is wrong can come back as the page of the app, with 200.
     const type = response.headers()["content-type"] ?? "";
     if (response.request().resourceType() === "image" && type.startsWith("text/html")) {
@@ -61,6 +76,19 @@ async function imagesLoaded(page) {
   );
 }
 
+/** A browser of its own, as a person on another device, which reports what the policy blocks to the console. */
+async function newBrowserContext(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await context.addInitScript(() => {
+    document.addEventListener("securitypolicyviolation", (event) => {
+      console.error(`Content-Security-Policy blocked ${event.blockedURI} (${event.violatedDirective})`);
+    });
+  });
+  const page = await context.newPage();
+  watch(page);
+  return page;
+}
+
 async function api(page, path) {
   const response = await page.request.get(`${base}${path}`);
   assert.equal(response.status(), 200, `GET ${path} answered ${response.status()}`);
@@ -69,18 +97,17 @@ async function api(page, path) {
 
 const browser = await chromium.launch({ channel: "chrome" });
 try {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  // Every document reports what the policy blocks to the console, where watch() catches it.
-  await context.addInitScript(() => {
-    document.addEventListener("securitypolicyviolation", (event) => {
-      console.error(`Content-Security-Policy blocked ${event.blockedURI} (${event.violatedDirective})`);
-    });
-  });
-  const page = await context.newPage();
-  watch(page);
+  const page = await newBrowserContext(browser);
 
-  console.log("An empty library");
+  console.log("Create the first admin with the setup code");
   await page.goto(base);
+  await page.getByRole("heading", { name: "Create the first admin" }).waitFor();
+  await page.getByLabel("Setup code").fill(setupCode);
+  await page.getByLabel("Email", { exact: true }).fill("alex@example.com");
+  await page.getByLabel("Display name").fill("Alex Morgan");
+  await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
+  await shot(page, "setup");
+  await page.getByRole("button", { name: "Create admin" }).click();
   await page.getByText("No videos yet").first().waitFor();
   await shot(page, "empty-library");
 
@@ -169,10 +196,53 @@ try {
   await until(async () => (await api(page, "/api/me")).me.displayName === "Alex", "the new name");
   await shot(page, "channel-settings");
 
-  console.log("The account page");
+  console.log("Change the password on the account page");
   await page.goto(`${base}/settings/account`);
-  await page.getByText("Language").first().waitFor();
+  await page.getByText("This device").waitFor();
+  await page.getByLabel("Current password").fill("correct horse battery");
+  await page.getByLabel("New password").fill("a new horse battery");
+  await page.getByRole("button", { name: "Change password" }).click();
+  await page.getByText("Changed the password.").waitFor();
   await shot(page, "account");
+
+  console.log("Make an invitation link");
+  await page.goto(`${base}/settings/people`);
+  await page.getByRole("heading", { name: "Invitations" }).waitFor();
+  await page.getByRole("button", { name: "Create invitation link" }).click();
+  const link = await page.locator("code").filter({ hasText: "/join/" }).first().textContent();
+  assert.ok(link?.startsWith(`${base}/join/`), `the invitation link is ${link}`);
+  await shot(page, "people");
+
+  console.log("A member joins with the link in a browser of their own");
+  const member = await newBrowserContext(browser);
+  await member.goto(link);
+  await member.getByRole("heading", { name: "Join albireo" }).waitFor();
+  await member.getByLabel("Email", { exact: true }).fill("sam@example.com");
+  await member.getByLabel("Display name").fill("Sam Lee");
+  await member.getByLabel("Password", { exact: true }).fill("a long password");
+  await shot(member, "join");
+  await member.getByRole("button", { name: "Join" }).click();
+  await member.getByText("Sample clip").first().waitFor();
+  await imagesLoaded(member);
+  await shot(member, "member-home");
+  const { video: seen } = await api(member, `/api/videos/${video.id}`);
+  assert.equal(seen.canEdit, false, "a member can edit the video of an admin");
+
+  console.log("The member logs out and signs in again");
+  await member.getByRole("button", { name: "Account of Sam Lee" }).click();
+  await member.getByRole("menuitem", { name: "Log out" }).click();
+  await member.getByRole("heading", { name: "Sign in to albireo" }).waitFor();
+  await member.getByLabel("Email", { exact: true }).fill("sam@example.com");
+  await member.getByLabel("Password", { exact: true }).fill("a long password");
+  await shot(member, "sign-in");
+  await member.getByRole("button", { name: "Sign in" }).click();
+  await member.getByText("Sample clip").first().waitFor();
+
+  console.log("The people page lists the member");
+  await page.goto(`${base}/settings/people`);
+  await page.getByText("sam@example.com").waitFor();
+  await imagesLoaded(page);
+  await shot(page, "people-with-member");
 
   console.log("The video page on a phone");
   await page.setViewportSize({ width: 390, height: 844 });

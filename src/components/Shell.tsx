@@ -1,4 +1,21 @@
-import { ArrowRight, History, House, KeyRound, Layers, LayoutGrid, ListVideo, Menu as MenuIcon, Plus, Search, Settings, Upload, UserRound, X } from "lucide-react";
+import {
+  ArrowRight,
+  History,
+  House,
+  KeyRound,
+  Layers,
+  LayoutGrid,
+  ListVideo,
+  LogOut,
+  Menu as MenuIcon,
+  Plus,
+  Search,
+  Settings,
+  Upload,
+  UserRound,
+  Users,
+  X,
+} from "lucide-react";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import appearance from "virtual:albireo-appearance";
 import { SEARCH_QUERY_MAX_LENGTH, TITLE_MAX_LENGTH } from "../../shared/api.ts";
@@ -10,6 +27,7 @@ import { Link, navigate, useLocationSearch, usePathname } from "../router.tsx";
 import { useSession } from "../session.tsx";
 import { useUploads } from "../uploads.tsx";
 import { Avatar } from "./Avatar.tsx";
+import { Logo } from "./Logo.tsx";
 import { Button } from "./ui/button.tsx";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu.tsx";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "./ui/dialog.tsx";
@@ -141,10 +159,14 @@ function SearchBox() {
   );
 }
 
-/** The menu of the person under their picture: their channel, its settings, and their account. */
+/**
+ * The menu of the signed-in person under their picture: their channel, its settings, their
+ * account, the people of albireo for admins, and logging out.
+ */
 function AccountMenu() {
-  const { me } = useSession();
+  const { me, signOut } = useSession();
   const t = useT();
+  const toast = useToast();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -161,6 +183,7 @@ function AccountMenu() {
           <Avatar url={me.avatarUrl} />
           <span className="grid min-w-0">
             <span className="truncate text-sm font-semibold text-strong">{me.displayName}</span>
+            <span className="truncate text-xs text-subdued">{me.email}</span>
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -175,6 +198,17 @@ function AccountMenu() {
         <DropdownMenuItem onSelect={() => navigate("/settings/account")}>
           <KeyRound />
           {t.common.account}
+        </DropdownMenuItem>
+        {me.isAdmin && (
+          <DropdownMenuItem onSelect={() => navigate("/settings/people")}>
+            <Users />
+            {t.shell.people}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => void signOut().catch((err: unknown) => toast.error(err instanceof Error ? err.message : String(err)))}>
+          <LogOut />
+          {t.shell.logOut}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -399,18 +433,5 @@ function NewItemForm({ titleLabel, create, onDone }: { titleLabel: string; creat
         </Button>
       </div>
     </form>
-  );
-}
-
-/**
- * The logo of the theme that matches the mode of the device. The picture takes no box of
- * its own, so the image lays out as if it stood alone.
- */
-function Logo({ alt, className }: { alt: string; className: string }) {
-  return (
-    <picture className="contents">
-      <source srcSet={appearance.darkLogo} media="(prefers-color-scheme: dark)" />
-      <img src={appearance.logo} alt={alt} className={className} />
-    </picture>
   );
 }

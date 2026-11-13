@@ -1,5 +1,5 @@
 {
-  // Files that run in Node.js beside the server: the build settings, the scripts, and the tests.
+  // Files that run in Node.js: the build settings, the scripts, and the tests.
   "compilerOptions": {
     "target": "ES2023",
     "lib": ["ES2023"],

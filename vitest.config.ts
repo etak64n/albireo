@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 
-// Tests run in Node.js. The API tests use an in-memory SQLite database in
-// place of D1 and a fake storage service, so they need no Cloudflare account.
+// The tests of the logic of the browser app, which run in Node.js. The tests of the server
+// are in Rust, in server/tests.
 export default defineConfig({
   test: {
     environment: "node",

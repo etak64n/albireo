@@ -1,4 +1,4 @@
-// The words of a search query, split as the API splits them (server/app.ts). The search
+// The words of a search query, split as the API splits them (server/src/api/videos.rs). The search
 // page finds the series of the library by their titles with them, in the browser.
 
 /** The words of a query, separated by spaces, also by the wide space of Japanese text. */

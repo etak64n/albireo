@@ -3,12 +3,13 @@ title: "Attachments"
 description: "Files that go with a video, such as its slides."
 ---
 
-An attachment is a file that goes with a video, such as its slides or notes (server/attachments.ts, src/components/Attachments.tsx).
+An attachment is a file that goes with a video, such as its slides or notes (server/src/api/videos.rs, src/components/Attachments.tsx).
+The uploader of the video and admins attach files and remove them, and everyone sees, previews, and downloads them.
 A file of any type can be attached, up to 500 MiB, with a name of at most 255 characters.
 
 - The browser sends the file to albireo, which writes it to the bucket, then commits it. albireo checks that the file is in the bucket and records its size.
 - albireo picks the content type from the file extension. HTML, SVG, and unknown types are stored as `application/octet-stream`, so that no uploaded file runs as a page.
-- albireo serves every file with a policy that runs no script and loads nothing when the file opens on its own, and with `X-Content-Type-Options: nosniff`, so the browser takes the type as albireo gives it (server/security-headers.ts).
+- albireo serves every file with a policy that runs no script and loads nothing when the file opens on its own, and with `X-Content-Type-Options: nosniff`, so the browser takes the type as albireo gives it (shared/security-headers.json, server/src/security.rs).
 
 The Preview button opens the file over the page (src/components/AttachmentPreview.tsx).
 

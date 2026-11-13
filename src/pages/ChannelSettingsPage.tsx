@@ -20,7 +20,7 @@ import { useSession } from "../session.tsx";
 /** What happens to the picture when the person saves. */
 type PictureChange = { kind: "keep" } | { kind: "replace"; image: Blob; preview: string } | { kind: "remove" };
 
-/** The channel of the person: their picture, their display name, and their bio. */
+/** The channel of the signed-in person as others see it: their picture, their display name, and their bio. */
 export function ChannelSettingsPage() {
   const { me, setMe } = useSession();
   const [displayName, setDisplayName] = useState(me.displayName);

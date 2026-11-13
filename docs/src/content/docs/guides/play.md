@@ -29,6 +29,6 @@ These keys work while the player has focus.
 The player takes the corners and the accent color of the theme (src/styles.css, `.albireo-player`).
 Video.js loads only with a video page, so the other pages open without it.
 
-- albireo streams the video from the bucket, and passes on the ranges that the player asks for, so the player starts at once and jumps to any point (server/app.ts, `/api/files/`).
+- albireo streams the video from the bucket, and passes on the ranges that the player asks for, so the player starts at once and jumps to any point (server/src/api/videos.rs, `/api/files/`).
 - When playback fails, as while albireo restarts, the player loads the video again and resumes where it stopped.
 - The player tries again at most once a minute, so a video that cannot play cannot cause a loop (src/components/VideoPlayer.tsx).

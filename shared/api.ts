@@ -13,6 +13,10 @@ export const RATING_MAX_STARS = 5;
 export const SEARCH_QUERY_MAX_LENGTH = 100;
 export const ATTACHMENT_MAX_BYTES = 500 * 1024 * 1024;
 export const ATTACHMENT_NAME_MAX_LENGTH = 255;
+/** A password has 10 to 200 characters. */
+export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MAX_LENGTH = 200;
+export const EMAIL_MAX_LENGTH = 254;
 /** IDs of videos, users, series, comments, and attachments: 16 digits and lowercase letters. */
 export const ID_PATTERN = /^[0-9a-z]{16}$/;
 /** The languages of the browser app. Each person chooses one on the account page. */
@@ -36,16 +40,123 @@ export interface UserProfile extends UserSummary {
   bio: string;
 }
 
-/** The person of albireo, whom albireo adds when it starts the first time. */
+/** The signed-in person. */
 export interface Me extends UserProfile {
-  /** When albireo added the person. */
+  email: string;
+  /** Admins edit every video, series, and playlist, and invite and remove people. */
+  isAdmin: boolean;
+  /** When the person joined: the setup of albireo for the first admin, and the use of their invitation for the others. */
   joinedAt: string;
-  /** The language of the browser app that the person chose. */
+  /** The language of the browser app that the person chose. Only they see it. */
   language: Language;
 }
 
 export interface MeResponse {
   me: Me;
+}
+
+/**
+ * Whom the browser app shows its pages to. GET /api/me answers 401 with the code
+ * "signed_out" without a session, and with "setup_needed" before albireo has its first admin.
+ */
+export type SignedOutCode = "signed_out" | "setup_needed";
+
+/** The first admin, with the setup code that albireo writes to its log while it has nobody. */
+export interface SetupRequest {
+  setupCode: string;
+  email: string;
+  displayName: string;
+  password: string;
+}
+
+export interface SignInRequest {
+  email: string;
+  password: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/** A session of the signed-in person: one browser where they signed in. */
+export interface Session {
+  id: string;
+  /** The browser and the operating system from the User-Agent header, each "" when albireo does not know it. */
+  browser: string;
+  os: string;
+  signedInAt: string;
+  /** The last request of the session, which albireo writes at most every five minutes. */
+  lastActiveAt: string;
+  expiresAt: string;
+  /** True for the session of this request. */
+  current: boolean;
+}
+
+export interface SessionsResponse {
+  sessions: Session[];
+}
+
+/** A person of the library, as the admins manage them. */
+export interface Person extends UserSummary {
+  email: string;
+  isAdmin: boolean;
+  joinedAt: string;
+  /** The last request of any of their sessions, or null when they have none. */
+  lastActiveAt: string | null;
+}
+
+export interface ListPeopleResponse {
+  people: Person[];
+}
+
+export interface PersonResponse {
+  person: Person;
+}
+
+export interface UpdatePersonRequest {
+  isAdmin: boolean;
+}
+
+/** An invitation that nobody has used yet. It works once, until it expires. */
+export interface Invitation {
+  id: string;
+  isAdmin: boolean;
+  invitedBy: UserSummary;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface CreateInvitationRequest {
+  isAdmin: boolean;
+}
+
+export interface CreateInvitationResponse {
+  invitation: Invitation;
+  /** The secret of the link, which albireo answers only now: the link is /join/<token>. */
+  token: string;
+}
+
+export interface ListInvitationsResponse {
+  invitations: Invitation[];
+}
+
+/** What the page of an invitation link shows before the person joins. */
+export interface JoinInfo {
+  isAdmin: boolean;
+  /** The display name of the person who invited them. */
+  invitedBy: string;
+  expiresAt: string;
+}
+
+export interface JoinInfoResponse {
+  invitation: JoinInfo;
+}
+
+export interface JoinRequest {
+  email: string;
+  displayName: string;
+  password: string;
 }
 
 export interface UpdateMeRequest {
@@ -138,7 +249,7 @@ export interface VideoDetail {
   series: VideoSeries | null;
   rating: VideoRating;
   attachments: VideoAttachment[];
-  /** Whether the person can edit the video, which the one person of albireo always can. */
+  /** Whether the person can edit the video: its uploader or an admin. */
   canEdit: boolean;
 }
 
@@ -194,7 +305,7 @@ export interface VideoComment {
   body: string;
   createdAt: string;
   author: UserSummary;
-  /** Whether the person can delete it, which the one person of albireo always can. */
+  /** Whether the person can delete it: its author, the uploader of the video, or an admin. */
   canDelete: boolean;
 }
 
@@ -309,7 +420,7 @@ export interface SeriesDetail {
   owner: UserSummary;
   createdAt: string;
   updatedAt: string;
-  /** Whether the person can edit the series, which the one person of albireo always can. */
+  /** Whether the person can edit the series: its owner or an admin. */
   canEdit: boolean;
   episodes: Episode[];
 }
@@ -359,7 +470,7 @@ export interface PlaylistDetail {
   owner: UserSummary;
   createdAt: string;
   updatedAt: string;
-  /** Whether the person can change the playlist, which the one person of albireo always can. */
+  /** Whether the person can change the playlist: its owner or an admin. */
   canEdit: boolean;
   videos: PlaylistVideo[];
 }

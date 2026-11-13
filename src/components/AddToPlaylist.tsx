@@ -12,7 +12,7 @@ import { useToast } from "./ui/toast.tsx";
 import { Skeleton } from "./ui/skeleton.tsx";
 
 /**
- * Puts the video in the playlists of the person and takes it out of them. The
+ * Puts the video in the playlists of the signed-in person and takes it out of them. The
  * button opens their playlists from the one changed last, each with a box that shows whether
  * it holds the video, and a row that makes a new playlist with the video in it. More than 10
  * playlists get a search field at the top, as the menus of select fields do. On small screens
@@ -43,7 +43,7 @@ export function AddToPlaylist({ videoId }: { videoId: string }) {
   );
 }
 
-/** The playlists of the person, from the one changed last, and the row for a new one. */
+/** The playlists of the signed-in person, from the one changed last, and the row for a new one. */
 function PlaylistChoices({ videoId }: { videoId: string }) {
   const { refresh } = useLibrary();
   const toast = useToast();

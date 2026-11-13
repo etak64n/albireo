@@ -2,7 +2,7 @@
   "name": "albireo",
   "version": "0.1.0",
   "private": true,
-  "description": "A private video library in one Docker container, with videos in S3-compatible storage.",
+  "description": "A private video library for a team: a Rust server with PostgreSQL, and videos in S3-compatible storage.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -10,13 +10,8 @@
   },
   "packageManager": "pnpm@12.16.1",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json && tsc -p server/tsconfig.json && tsc -p tsconfig.node.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "@hono/node-server": "^2.1.0",
-    "aws4fetch": "^1.0.20",
-    "hono": "^4.13.16"
   },
   "devDependencies": {
     "@extend-ai/react-pptx": "^0.2.2",

@@ -18,8 +18,9 @@ import { NotFoundPage } from "./NotFoundPage.tsx";
 
 /**
  * The edit page of a video: its title, its description, and its series beside its thumbnail,
- * which a frame of the video can replace, and the deletion of the video. Saving or canceling
- * goes back to the video, and deleting it goes to all videos.
+ * which a frame of the video can replace, and the deletion of the video. Only the uploader of
+ * the video and admins can change or delete the video, so only they find the page; the API
+ * checks the same. Saving or canceling goes back to the video, and deleting it goes to all videos.
  */
 export function VideoEditPage({ id }: { id: string }) {
   const [video, setVideo] = useState<VideoDetail | null>(null);

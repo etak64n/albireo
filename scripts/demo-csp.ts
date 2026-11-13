@@ -1,5 +1,5 @@
 // Opens the demo build with the Content-Security-Policy that albireo sends with its pages
-// (server/security-headers.ts), and fails when the browser blocks anything. The demo is the
+// (shared/security-headers.json), and fails when the browser blocks anything. The demo is the
 // browser app of albireo with sample data, so a change that adds an inline script, a call
 // to eval, or a load from another site fails here, before the demo goes out. The demo reads
 // its sample files from its own origin, as albireo serves the files of the bucket from its
@@ -7,7 +7,7 @@
 // scripts/demo-media.ts, with Playwright and its Chromium in a folder of their own:
 //   node scripts/demo-csp.ts <folder of the demo build> <folder of the tools> <base path of the demo>
 
-import { createReadStream, readdirSync, statSync } from "node:fs";
+import { createReadStream, readdirSync, readFileSync, statSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
@@ -15,7 +15,6 @@ import { extname, join, resolve, sep } from "node:path";
 import { createLibrary, type DemoVideo } from "../src/demo/data.ts";
 import { ATTACHMENT_FILES } from "../src/demo/media.ts";
 import { previewKindOf } from "../src/lib/attachments.ts";
-import { pageHeaders } from "../server/security-headers.ts";
 
 // The parts of Playwright that this script uses. Playwright is no dependency of albireo,
 // so its own types are not at hand.
@@ -129,7 +128,10 @@ function serve(site: string, base: string, policy: string): Promise<Server> {
 }
 
 async function main(site: string, toolsFolder: string, base: string): Promise<void> {
-  const policy = pageHeaders()["Content-Security-Policy"] ?? "";
+  const headers = JSON.parse(readFileSync(new URL("../shared/security-headers.json", import.meta.url), "utf8")) as {
+    page: Record<string, string>;
+  };
+  const policy = headers.page["content-security-policy"] ?? "";
   console.log(`Content-Security-Policy: ${policy}`);
   const server = await serve(site, base, policy);
   const { port } = server.address() as AddressInfo;
@@ -212,6 +214,10 @@ async function main(site: string, toolsFolder: string, base: string): Promise<vo
     await run("Account", async () => {
       await page.goto(`${home}settings/account`);
       await page.getByRole("heading", { level: 1, name: /./ }).waitFor();
+    });
+    await run("People", async () => {
+      await page.goto(`${home}settings/people`);
+      await page.getByRole("heading", { level: 2, name: "Invitations" }).waitFor();
     });
     // Cropping shows the chosen picture from a blob: URL.
     await run("Choosing a picture for the channel", async () => {

@@ -12,3 +12,6 @@ demo-dist/
 
 # What the browser test writes
 test/browser/out/
+
+# What cargo builds
+server/target/

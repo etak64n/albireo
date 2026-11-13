@@ -25,8 +25,8 @@ import { NotFoundPage } from "./NotFoundPage.tsx";
 
 /**
  * The page of a series: its cover, title, and creator, its description, and the table of its
- * episodes, or that it has none yet. Videos uploaded from the page join the series. The person
- * edits and deletes it; deleting it keeps its videos in the library.
+ * episodes, or that it has none yet. Videos uploaded from the page join the series. Its creator
+ * and admins edit and delete it; deleting it keeps its videos in the library.
  */
 export function SeriesPage({ id }: { id: string }) {
   const { refresh } = useLibrary();

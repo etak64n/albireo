@@ -26,8 +26,8 @@ export function playlistVideoPath(videoId: string, playlistId: string): string {
 
 /**
  * The page of a playlist: its cover, title, and owner, its description, and the table of its
- * videos, which Play all plays from the first. The person edits it, reorders and removes its
- * videos, and deletes it; deleting it keeps its videos in the library.
+ * videos, which Play all plays from the first. Its owner and admins edit it, reorder and
+ * remove its videos, and delete it; deleting it keeps its videos in the library.
  */
 export function PlaylistPage({ id }: { id: string }) {
   const { refresh } = useLibrary();
@@ -176,7 +176,8 @@ const CELL = "px-2 py-2 align-middle";
 
 /**
  * The videos of the playlist in order, one row each. A click anywhere on a row plays the video
- * in the playlist. The menu at the end of a row moves and removes the video.
+ * in the playlist. The owner of the playlist and admins move and remove a video from the menu
+ * at the end of its row.
  */
 function PlaylistTable({
   playlist,

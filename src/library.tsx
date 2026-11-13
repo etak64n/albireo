@@ -1,4 +1,4 @@
-// The series of the library and the playlists of the person, loaded once and
+// The series of the library and the playlists of the signed-in person, loaded once and
 // shared by the sidebar and the pages. A page that creates or changes a series or a
 // playlist calls refresh, so every list shows the change.
 
@@ -10,7 +10,7 @@ import { useSession } from "./session.tsx";
 interface Library {
   /** Every series, from the one that changed last. Null until the first load. */
   series: SeriesSummary[] | null;
-  /** The playlists of the person, from the one that changed last. Null until the first load. */
+  /** The playlists of the signed-in person, from the one that changed last. Null until the first load. */
   playlists: PlaylistSummary[] | null;
   error: string;
   refresh: () => Promise<void>;

@@ -11,7 +11,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "albireo",
-      description: "A private video library in one Docker container.",
+      description: "A private video library for a team, with videos in S3-compatible storage.",
       logo: { src: "./src/assets/albireo-icon.svg" },
       favicon: "/favicon.svg",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/etak64n/albireo" }],
@@ -23,7 +23,6 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
-            "guides/one-person",
             "guides/upload",
             "guides/home-and-lists",
             "guides/search",
@@ -33,6 +32,7 @@ export default defineConfig({
             "guides/ratings-and-comments",
             "guides/attachments",
             "guides/channels",
+            "guides/people",
           ],
         },
         { label: "Settings", items: ["settings/configuration"] },

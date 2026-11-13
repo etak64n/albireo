@@ -8,7 +8,7 @@ import { VideoGrid, VideoGridSkeleton } from "../components/VideoGrid.tsx";
 import { useT } from "../i18n.ts";
 import { usePageTitle } from "../lib/title.ts";
 
-/** The videos that the person watched, from the last watched. */
+/** The videos that the signed-in person watched, from the last watched. */
 export function HistoryPage() {
   const [videos, setVideos] = useState<WatchedVideo[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);

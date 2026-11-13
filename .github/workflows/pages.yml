@@ -39,7 +39,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Pages serves a project site under the name of the repository, such as /albireo-on-cloudflare/.
+      # Pages serves a project site under the name of the repository, such as /albireo/.
       # The build empties demo-dist first, so the other parts of the site come after it.
       - name: Build the demo
         run: pnpm exec vite build --config vite.demo.config.ts --mode demo --base "/${{ github.event.repository.name }}/"

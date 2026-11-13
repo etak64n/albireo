@@ -657,6 +657,10 @@ export const SCREENS = {
 /** The colors of the picture of each person, from the upper left corner to the lower right. */
 const PICTURE_COLORS: Record<PictureFile, readonly [string, string]> = {
   alex: [NAVY, "#2f5aa8"],
+  mina: ["#9c3f63", "#e08a63"],
+  daniel: ["#1d4d35", "#5b9a6a"],
+  jonas: ["#0b4a63", "#2d8a9a"],
+  kenji: ["#463a86", "#8574c4"],
 };
 
 /** The picture of a person: the first letter of their name on a soft gradient, as a square that the app shows in a circle. */

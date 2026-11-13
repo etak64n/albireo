@@ -54,7 +54,7 @@ function rememberRecommendations(now: number): void {
 }
 
 /**
- * The videos of Home, in a grid without a title: the recommendations for the person
+ * The videos of Home, in a grid without a title: the recommendations for the signed-in person
  * when the page loads for the first time in a while, and videos at random when it loads again
  * before then. Coming back to Home from another page shows the same videos again.
  */

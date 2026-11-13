@@ -1,0 +1,6 @@
+# The versions of the tools that build and check albireo: `mise install node pnpm rust` puts
+# them on a machine, and CI reads this file too. The Dockerfile names the same versions.
+[tools]
+node = "24.22.3"
+pnpm = "12.16.1"
+rust = { version = "1.100.0", profile = "minimal", components = "clippy,rustfmt" }

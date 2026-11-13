@@ -4,16 +4,23 @@ import type {
   AddToPlaylistRequest,
   ApiErrorBody,
   AttachmentResponse,
+  ChangePasswordRequest,
   CommentResponse,
   CompleteUploadRequest,
   CreateCommentRequest,
+  CreateInvitationRequest,
+  CreateInvitationResponse,
   CreatePlaylistRequest,
   CreateSeriesRequest,
   CreateUploadRequest,
   CreateUploadResponse,
   HistoryResponse,
   ImageUploadResponse,
+  JoinInfoResponse,
+  JoinRequest,
   ListCommentsResponse,
+  ListInvitationsResponse,
+  ListPeopleResponse,
   ListPlaylistsResponse,
   ListSeriesResponse,
   ListVideosResponse,
@@ -21,6 +28,7 @@ import type {
   MoveEpisodeRequest,
   MovePlaylistVideoRequest,
   PartUrlsResponse,
+  PersonResponse,
   PlaylistChoicesResponse,
   PlaylistResponse,
   RateVideoRequest,
@@ -28,11 +36,16 @@ import type {
   RandomVideosResponse,
   RecommendationsResponse,
   SearchResponse,
+  SessionsResponse,
+  SetupRequest,
+  SignedOutCode,
+  SignInRequest,
   StartAttachmentRequest,
   StartAttachmentResponse,
   SeriesResponse,
   ThumbnailUploadResponse,
   UpdateMeRequest,
+  UpdatePersonRequest,
   UpdatePlaylistRequest,
   UpdateSeriesRequest,
   UpdateVideoRequest,
@@ -53,6 +66,20 @@ export class ApiError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+/** Whether the code of a 401 says that the browser has no session, rather than a wrong password. */
+export function isSignedOutCode(code: string): code is SignedOutCode {
+  return code === "signed_out" || code === "setup_needed";
+}
+
+// The session tells the app when a request finds that its session ended: it expired, the person
+// changed their password in another browser, or an admin removed them. The app then signs in again.
+const signedOutListeners = new Set<(code: SignedOutCode) => void>();
+
+export function onSignedOut(listener: (code: SignedOutCode) => void): () => void {
+  signedOutListeners.add(listener);
+  return () => signedOutListeners.delete(listener);
 }
 
 // Reads, and PUTs that put the same thing in the same place, run again after a lost connection
@@ -93,6 +120,9 @@ async function send<T>(path: string, method: string, body?: unknown): Promise<T>
     const error = isErrorBody(data)
       ? data.error
       : { code: "http_error", message: currentMessages().api.failed(response.status) };
+    if (response.status === 401 && isSignedOutCode(error.code)) {
+      for (const listener of signedOutListeners) listener(error.code);
+    }
     throw new ApiError(response.status, error.code, error.message);
   }
   return data as T;
@@ -106,12 +136,35 @@ function isErrorBody(value: unknown): value is ApiErrorBody {
 }
 
 export const api = {
+  /** Creates the first admin with the setup code from the log of albireo, and signs them in. */
+  setup: (body: SetupRequest) => request<MeResponse>("/api/setup", "POST", body),
+  signIn: (body: SignInRequest) => request<MeResponse>("/api/sign-in", "POST", body),
+  /** Ends the session of this browser. */
+  signOut: () => request<void>("/api/sign-out", "POST"),
+  getJoinInfo: (token: string) => request<JoinInfoResponse>(`/api/join/${encodeURIComponent(token)}`, "GET"),
+  /** Makes the account of the person with an invitation, and signs them in. */
+  join: (token: string, body: JoinRequest) => request<MeResponse>(`/api/join/${encodeURIComponent(token)}`, "POST", body),
+
   getMe: () => request<MeResponse>("/api/me", "GET"),
   updateMe: (changes: UpdateMeRequest) => request<MeResponse>("/api/me", "PATCH", changes),
   avatarUpload: () => request<ImageUploadResponse>("/api/me/avatar", "POST"),
   commitAvatar: () => request<MeResponse>("/api/me/avatar/commit", "POST"),
   removeAvatar: () => request<MeResponse>("/api/me/avatar", "DELETE"),
+  /** Changes the password, and ends every other session of the person. */
+  changePassword: (body: ChangePasswordRequest) => request<void>("/api/me/password", "POST", body),
+  getSessions: () => request<SessionsResponse>("/api/me/sessions", "GET"),
+  endSession: (id: string) => request<void>(`/api/me/sessions/${id}`, "DELETE"),
   getUser: (id: string) => request<UserResponse>(`/api/users/${id}`, "GET"),
+
+  // The people and the invitations, which only admins see and change.
+  listPeople: () => request<ListPeopleResponse>("/api/people", "GET"),
+  updatePerson: (id: string, changes: UpdatePersonRequest) => request<PersonResponse>(`/api/people/${id}`, "PATCH", changes),
+  /** Removes a person: they cannot sign in. Their videos and comments stay. */
+  removePerson: (id: string) => request<void>(`/api/people/${id}`, "DELETE"),
+  listInvitations: () => request<ListInvitationsResponse>("/api/invitations", "GET"),
+  /** Makes an invitation. The answer holds its token, which albireo shows only once. */
+  createInvitation: (body: CreateInvitationRequest) => request<CreateInvitationResponse>("/api/invitations", "POST", body),
+  deleteInvitation: (id: string) => request<void>(`/api/invitations/${id}`, "DELETE"),
   getHistory: (cursor: string | null) =>
     request<HistoryResponse>(cursor === null ? "/api/history" : `/api/history?cursor=${encodeURIComponent(cursor)}`, "GET"),
   recordWatch: (videoId: string) => request<void>(`/api/videos/${videoId}/watched`, "POST"),

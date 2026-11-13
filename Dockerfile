@@ -12,36 +12,40 @@ COPY public/ public/
 COPY themes/ themes/
 COPY shared/ shared/
 COPY src/ src/
-RUN pnpm exec vite build \
- && mkdir /data
+RUN pnpm exec vite build
 
-# The dependencies of the server, which are JavaScript too, in a plain node_modules.
-FROM --platform=$BUILDPLATFORM node:24-slim AS server-dependencies
-WORKDIR /src
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN npm install --global "$(node -p 'require("./package.json").packageManager')" \
- && echo "nodeLinker: hoisted" >> pnpm-workspace.yaml \
- && pnpm install --prod --frozen-lockfile
+# The server, built on the platform of the image. The dependencies build first, in a layer of
+# their own, so that a change of albireo alone does not build them again.
+FROM rust:1.100.0-slim-trixie AS server
+WORKDIR /src/server
+COPY server/Cargo.toml server/Cargo.lock ./
+RUN mkdir src \
+ && echo "fn main() {}" > src/main.rs \
+ && touch src/lib.rs \
+ && cargo build --release --locked \
+ && rm -rf src
+# The migrations and the security headers go into the program as it builds.
+COPY migrations/ /src/migrations/
+COPY shared/security-headers.json /src/shared/
+COPY server/src/ src/
+# COPY keeps the times of the files, which can be older than the build of the dependencies.
+RUN touch src/main.rs src/lib.rs \
+ && cargo build --release --locked
 
-# Node.js runs the TypeScript of the server as it is, and keeps the database with node:sqlite.
-FROM node:24-slim
+FROM debian:trixie-slim
 LABEL org.opencontainers.image.title="albireo" \
-      org.opencontainers.image.description="A private video library in one Docker container, with videos in S3-compatible storage" \
+      org.opencontainers.image.description="A private video library for a team, with videos in S3-compatible storage" \
       org.opencontainers.image.source="https://github.com/etak64n/albireo" \
       org.opencontainers.image.licenses="MIT"
-ENV NODE_ENV=production
+# albireo checks the certificate of the bucket with the certificates of Debian.
+RUN apt-get update \
+ && apt-get install --yes --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --system --no-create-home --shell /usr/sbin/nologin albireo
 WORKDIR /app
-COPY --from=server-dependencies /src/node_modules/ node_modules/
+COPY --from=server /src/server/target/release/albireo /usr/local/bin/albireo
 COPY --from=app /src/dist/ dist/
-COPY --from=app --chown=node:node /data /data
-COPY package.json ./
-COPY migrations/ migrations/
-COPY shared/ shared/
-COPY server/ server/
-USER node
-VOLUME /data
+USER albireo
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s \
-  CMD ["node", "-e", "fetch('http://127.0.0.1:8080/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
-# The warnings say that type stripping and node:sqlite are still experimental in Node.js 24.
-CMD ["node", "--disable-warning=ExperimentalWarning", "server/main.ts"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD ["albireo", "healthcheck"]
+CMD ["albireo", "serve"]

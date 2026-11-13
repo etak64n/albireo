@@ -9,6 +9,7 @@ import { ChannelSettingsPage } from "./pages/ChannelSettingsPage.tsx";
 import { HistoryPage } from "./pages/HistoryPage.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
+import { PeoplePage } from "./pages/PeoplePage.tsx";
 import { PlaylistPage } from "./pages/PlaylistPage.tsx";
 import { SearchPage } from "./pages/SearchPage.tsx";
 import { SeriesPage } from "./pages/SeriesPage.tsx";
@@ -59,6 +60,8 @@ function Page() {
       return <ChannelSettingsPage />;
     case "account":
       return <AccountPage />;
+    case "people":
+      return <PeoplePage />;
     case "video":
       return <VideoPage key={route.id} id={route.id} />;
     case "video-edit":
