@@ -5,7 +5,8 @@
 # the log, and signs in. Across both containers, it uploads a file in two parts, reads it back
 # whole and in a range, sends a thumbnail and an attachment, invites a member, and edits the
 # library. It then restarts the containers and replaces one, to check that the library and the
-# sessions stay in the database, removes the member, and deletes the video with its files.
+# sessions stay in the database, writes a copy of the database to the bucket and restores it into
+# a new database for a third container, removes the member, and deletes the video with its files.
 #
 # Usage: test/e2e.sh <image>
 # Needs docker, curl, jq, and the AWS CLI.
@@ -16,12 +17,14 @@ work=$(mktemp -d)
 network=albireo-e2e
 first=albireo-e2e-1
 second=albireo-e2e-2
+third=albireo-e2e-3
 database=albireo-e2e-db
 bucket_container=albireo-e2e-bucket
 bucket=albireo
 # The two containers of albireo, each on a port of its own.
 one=http://127.0.0.1:8081
 two=http://127.0.0.1:8082
+three=http://127.0.0.1:8083
 passed=false
 
 cleanup() {
@@ -31,7 +34,7 @@ cleanup() {
       docker logs "$container" 2>&1 | tail -n 60 || true
     done
   fi
-  docker rm -f "$first" "$second" "$database" "$bucket_container" >/dev/null 2>&1 || true
+  docker rm -f "$first" "$second" "$third" "$database" "$bucket_container" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
   rm -rf "$work"
 }
@@ -224,6 +227,33 @@ check_library "$one"
 # albireo writes a setup code only while it has nobody.
 [[ -z $(docker logs "$first" 2>/dev/null | jq -R -r 'fromjson? | select(.setupCode != null) | .setupCode') ]] \
   || fail "albireo wrote a setup code although it has an admin"
+
+echo "Write a copy of the database to the bucket, beside the running containers"
+docker run --rm --network "$network" "${settings[@]}" "$image" backup >"$work/backup.log" 2>&1 \
+  || { cat "$work/backup.log"; fail "the backup failed"; }
+key=$(jq -R -r 'fromjson? | select(.key != null) | .key' "$work/backup.log" | tail -n 1)
+[[ $key == backups/albireo-*.sql.gz ]] || { cat "$work/backup.log"; fail "the backup named no copy"; }
+"${s3[@]}" head-object --bucket "$bucket" --key "$key" >/dev/null || fail "the bucket has no $key"
+status=$(curl -sS -b "$work/admin.jar" -o /dev/null -w '%{http_code}' "$one/api/files/$key")
+[[ $status == 404 ]] || fail "albireo served the copy of the database: $status"
+
+echo "Restore the copy into a new database, which a third container serves"
+# A copy goes into an empty database only.
+status=0
+docker run --rm --network "$network" "${settings[@]}" "$image" restore "$key" >"$work/refused.log" 2>&1 || status=$?
+[[ $status == 1 ]] && grep -q "Please restore into an empty database" "$work/refused.log" \
+  || { cat "$work/refused.log"; fail "a restore into the database of the library did not stop with an instruction"; }
+docker exec "$database" createdb --username albireo restored
+restored=(-e DATABASE_URL="postgres://albireo:e2e-password@$database:5432/restored")
+docker run --rm --network "$network" "${settings[@]}" "${restored[@]}" "$image" restore "$key" >"$work/restore.log" 2>&1 \
+  || { cat "$work/restore.log"; fail "the restore failed"; }
+docker run -d --name "$third" --network "$network" -p 127.0.0.1:8083:8080 "${settings[@]}" "${restored[@]}" "$image" >/dev/null
+wait_for "$three"
+# The session of the admin is in the copy too, and so is their password.
+check_library "$three"
+status=$(curl -sS -o /dev/null -w '%{http_code}' "${json[@]}" -d '{"email":"admin@example.com","password":"correct horse battery"}' "$three/api/sign-in")
+[[ $status == 200 ]] || fail "the admin could not sign in on the restored database: $status"
+docker rm -f "$third" >/dev/null
 
 echo "Remove the member, whose session ends and whose comment stays"
 curl -fsS -b "$work/admin.jar" -X DELETE "$two/api/people/$member_id"

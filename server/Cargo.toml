@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 argon2 = "0.6"
+async-compression = { version = "0.4.52", features = ["tokio", "gzip"] }
 async-trait = "0.1"
 axum = "0.8.9"
 base64 = "0.23"
@@ -25,6 +26,7 @@ sha2 = "0.11"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "chrono", "macros", "migrate"] }
 thiserror = "2"
 tokio = { version = "1.54", features = ["rt-multi-thread", "macros", "signal", "time", "net", "fs"] }
+tokio-util = { version = "0.7.20", features = ["io"] }
 tower-http = { version = "0.7", features = ["compression-gzip", "compression-br"] }
 url = "2"
 

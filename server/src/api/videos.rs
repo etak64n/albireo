@@ -1040,6 +1040,7 @@ mod tests {
             "",
             "database/albireo.dump",
             "videos/abcdefghij012345/original.MP4",
+            "backups/albireo-20261114T031500Z.sql.gz",
         ] {
             assert!(!is_file_key(key), "{key}");
         }

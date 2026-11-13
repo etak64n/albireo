@@ -36,6 +36,7 @@ Upload, watch, rate, and comment on videos together, group them in series and pl
 - A container serves the app and its API, and keeps nothing of its own: the library is in PostgreSQL, and the files are in the bucket. Run one container, or several for a library that stays up while one restarts.
 - Every file passes through albireo, so the browser talks to albireo alone. The bucket needs no CORS rules, and the access key stays on the server.
 - People sign in with an email and a password. The first admin signs up with a setup code from the log of albireo, and admins invite everyone else with a link. Members edit what they made, and admins edit everything.
+- `albireo backup` writes a copy of the database to the bucket, and `albireo restore` loads one into an empty database.
 
 ## Features
 
@@ -115,7 +116,7 @@ When a setting is wrong, albireo stops at once, and `docker compose logs albireo
 
 ## Documentation
 
-The [documentation](https://etak64n.github.io/albireo/docs/) covers the deployment behind a proxy with HTTPS, several containers, every setting, updates and backups, people and sign-in, each feature, and how albireo works.
+The [documentation](https://etak64n.github.io/albireo/docs/) covers the deployment behind a proxy with HTTPS, several containers, every setting and command, updates, backups and restores, people and sign-in, each feature, and how albireo works.
 
 ## License
 

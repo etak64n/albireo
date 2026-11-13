@@ -77,7 +77,8 @@ jobs:
 
       - run: cargo clippy --all-targets --locked -- --deny warnings
 
-      - run: cargo test --locked
+      # Every test runs, also after a failure, so that one run shows every failure.
+      - run: cargo test --locked --no-fail-fast
 
   # The image on both architectures that it ships for, each on a runner of its own.
   e2e:

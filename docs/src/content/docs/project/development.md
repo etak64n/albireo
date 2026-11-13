@@ -128,6 +128,7 @@ package.json defines these scripts.
   - server/src/api/: the routes of the API, by area: accounts, videos, and the series and playlists
   - server/src/repo/: the queries of the database
   - server/src/storage.rs and server/src/storage_check.rs: the client of the bucket, and the check of the key when albireo starts
+  - server/src/backup.rs: the copies of the database that the commands backup and restore write and load
   - server/tests/: the tests of the API
 - src/: the browser app
 - shared/: the API types, the limits, and the security headers that the server and the browser app share

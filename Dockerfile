@@ -48,4 +48,6 @@ COPY --from=app /src/dist/ dist/
 USER albireo
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD ["albireo", "healthcheck"]
-CMD ["albireo", "serve"]
+# The arguments of `docker run` replace serve, such as backup or restore <key>.
+ENTRYPOINT ["albireo"]
+CMD ["serve"]

@@ -236,11 +236,22 @@ pub async fn join(State(state): State<AppState>, Path(token): Path<String>, head
     )?;
     let password = read_string(&body, "password", password_rule())?;
     auth::check_new_password(&password, "password")?;
+    // A request without a working invitation learns nothing more, not even whether the email
+    // has an account, and costs no hash of a password.
+    let token_hash = sha256_hex(&token);
+    if people::find_invitation_by_token(&state.db, &token_hash, now()).await?.is_none() {
+        return Err(invitation_gone());
+    }
     let password_hash = auth::hash_password(password).await?;
     let now = now();
 
     let mut transaction = state.db.begin().await?;
     people::lock_people(&mut transaction).await?;
+    let Some(is_admin) = people::take_invitation(&mut transaction, &token_hash, now).await? else {
+        return Err(invitation_gone());
+    };
+    // An email that has an account already leaves the invitation unused: the transaction, which
+    // took it, rolls back.
     let existing: Option<(String, Option<crate::time::Time>)> = sqlx::query_as("SELECT id, removed_at FROM users WHERE email = $1")
         .bind(&email)
         .fetch_optional(&mut *transaction)
@@ -248,9 +259,6 @@ pub async fn join(State(state): State<AppState>, Path(token): Path<String>, head
     if existing.as_ref().is_some_and(|(_, removed_at)| removed_at.is_none()) {
         return Err(ApiError::conflict("This email has an account already. Sign in with it.").into());
     }
-    let Some(is_admin) = people::take_invitation(&mut transaction, &sha256_hex(&token), now).await? else {
-        return Err(invitation_gone());
-    };
     let id = existing.as_ref().map_or_else(random_id, |(id, _)| id.clone());
     let user = NewUser {
         id: &id,

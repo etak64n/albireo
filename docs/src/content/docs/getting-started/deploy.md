@@ -1,6 +1,6 @@
 ---
 title: "Deploy"
-description: "Run albireo with PostgreSQL and your own bucket behind HTTPS, run more containers, update it, and back it up."
+description: "Run albireo with PostgreSQL and your own bucket behind HTTPS, run more containers, update it, and back it up and restore it."
 ---
 
 This page runs albireo on a server of yours, with PostgreSQL beside it and a bucket at an S3-compatible storage service.
@@ -15,10 +15,13 @@ albireo writes its files under these prefixes (server/src/api/videos.rs, server/
 - `thumbnails/`: a JPEG for each video
 - `avatars/`: the pictures of the channels
 - `attachments/`: the files attached to the videos
+- `backups/`: the copies of the database that `albireo backup` writes
 - `albireo-check/`: a short file that albireo writes and deletes when it starts, to check the key
 
-Add a lifecycle rule that aborts incomplete multipart uploads after a day or more.
-When an upload stops halfway, as when the browser closes, the parts that reached the bucket stay there until the rule removes them.
+Add two lifecycle rules to the bucket.
+
+1. A rule that aborts incomplete multipart uploads after a day or more. When an upload stops halfway, as when the browser closes, the parts that reached the bucket stay there until the rule removes them.
+2. A rule that deletes the objects under `backups/` after the days that you keep copies of the database, such as 30. albireo never deletes a copy itself.
 
 The bucket needs no CORS rules: the browser never talks to it.
 
@@ -171,6 +174,7 @@ Several containers can therefore serve one library behind a proxy that spreads t
 ## Update
 
 Read the notes of the release first: until version 1.0.0, a minor version, such as 0.2.0, may need a change to the settings.
+Make a copy of the database with `albireo backup`, as [Back up](#back-up) describes, since a new version may change the database when it starts.
 Then change the version in `image`, and start the new image.
 
 ```bash
@@ -186,28 +190,46 @@ albireo applies the new migrations of its database when it starts.
 ## Back up
 
 The library lives in two places: the database in PostgreSQL, and the files in the bucket.
-The database alone tells who the people are, and the titles, the series, the comments, and the other details of the videos, so back it up with the bucket.
+`albireo backup` writes a copy of the database to the bucket, under `backups/`, and exits (server/src/backup.rs).
 
 ```bash
-# Write a copy of the database to albireo.dump in this folder, while albireo runs
-# exec -T : run in the container without a terminal, so the output goes to the file
-# --format custom : a compressed dump that pg_restore reads
-docker compose exec -T postgres pg_dump --username albireo --format custom albireo > albireo.dump
+# Write a copy of the database to the bucket, while albireo keeps serving
+# run --rm : start a container of the albireo service for this command alone, and remove it after
+docker compose run --rm albireo backup
 ```
 
-To restore the copy into an empty database, stop albireo, and pass the dump to pg_restore.
+- The copy is the database as it was at one moment. Its name holds that moment in UTC, such as `backups/albireo-20261114T031500Z.sql.gz`, and the last line of the log names it too.
+- albireo makes a copy only when the command runs. To make one every day, run the command from the scheduler of the server, as the example below does with cron.
+- The lifecycle rule of `backups/` deletes the old copies, as [Create the bucket](#1-create-the-bucket) describes.
+- A copy holds the hashes of the passwords and of the sessions, as the database does, so keep the bucket private. albireo never serves a copy at `/api/files/`.
+- A copy is SQL, compressed with gzip: a `COPY` statement for each table, with its rows. psql also reads it into the tables that albireo makes.
+
+```text
+# crontab of the server: a copy of the database at 03:00 every day
+# cd /srv/albireo : the folder of compose.yaml, where docker compose finds the services
+0 3 * * * cd /srv/albireo && docker compose run --rm albireo backup
+```
+
+## Restore
+
+`albireo restore <key>` loads a copy into an empty database: it prepares the tables of albireo, and loads the whole copy or nothing.
+After a loss of the database, such as of the volume postgres-data, PostgreSQL starts with an empty database, which the restore fills.
 
 ```bash
-# Stop albireo, so that nothing writes to the database while it fills
+# Stop albireo, so that nobody changes the library while it goes in
 docker compose stop albireo
 
-# Fill the database from the dump
-# --clean --if-exists : replace the tables that are there with those of the dump
-docker compose exec -T postgres pg_restore --username albireo --dbname albireo --clean --if-exists < albireo.dump
+# Load the copy into the empty database of DATABASE_URL
+# restore <key> : the copy to load, by its name in the bucket
+docker compose run --rm albireo restore backups/albireo-20261114T031500Z.sql.gz
 
 # Start albireo again
 docker compose start albireo
 ```
+
+- The people sign in with the passwords of the copy, and the sessions of the copy work again.
+- The restore stops with an instruction when the database has a library already. To keep a database that has one, create an empty database beside it, such as with `docker compose exec postgres createdb --username albireo albireo_restored`, and point `DATABASE_URL` at it.
+- The restore also stops when the copy comes from a version of albireo with other migrations. Restore such a copy with the version that made it, which the instruction names, then start the version that you want, which updates the database.
 
 ## Uninstall
 

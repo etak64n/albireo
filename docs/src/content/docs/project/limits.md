@@ -53,4 +53,5 @@ export const EMAIL_MAX_LENGTH = 254;
 - albireo does not transcode videos or create HLS streams.
 - albireo has no editing of comments.
 - albireo has no previews of Word and Excel files. They download only.
-- albireo does not back up its database. Back up PostgreSQL and the bucket yourself.
+- albireo makes a copy of its database only when `albireo backup` runs, and never deletes a copy. The scheduler of the server runs the command, and a lifecycle rule of the bucket deletes the old copies.
+- albireo does not back up the files of the bucket. Use the versioning or the replication of your storage service.

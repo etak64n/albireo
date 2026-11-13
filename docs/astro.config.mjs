@@ -35,7 +35,7 @@ export default defineConfig({
             "guides/people",
           ],
         },
-        { label: "Settings", items: ["settings/configuration"] },
+        { label: "Settings", items: ["settings/configuration", "settings/commands"] },
         { label: "Internals", items: ["internals/architecture"] },
         { label: "Project", items: ["project/limits", "project/development", "project/releases"] },
       ],
