@@ -205,8 +205,6 @@ const en = {
     email: "Email",
     password: "Password",
     displayName: "Display name",
-    /** Under the field of a new password. */
-    passwordLength: (min: number) => `At least ${min} characters.`,
     signIn: "Sign in",
     signInTitle: (siteName: string) => `Sign in to ${siteName}`,
     setupTitle: "Create the first admin",
@@ -479,7 +477,6 @@ const ja: Messages = {
     email: "メールアドレス",
     password: "パスワード",
     displayName: "表示名",
-    passwordLength: (min) => `${min} 文字以上。`,
     signIn: "サインイン",
     signInTitle: (siteName) => `${siteName} にサインイン`,
     setupTitle: "最初の管理者を作成",

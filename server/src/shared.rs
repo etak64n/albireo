@@ -12,7 +12,6 @@ pub const RATING_MAX_STARS: i64 = 5;
 pub const SEARCH_QUERY_MAX_LENGTH: usize = 100;
 pub const ATTACHMENT_MAX_BYTES: i64 = 500 * 1024 * 1024;
 pub const ATTACHMENT_NAME_MAX_LENGTH: usize = 255;
-pub const PASSWORD_MIN_LENGTH: usize = 10;
 pub const PASSWORD_MAX_LENGTH: usize = 200;
 pub const EMAIL_MAX_LENGTH: usize = 254;
 /// The languages of the browser app. Each person chooses one on the account page.

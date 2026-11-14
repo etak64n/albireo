@@ -168,15 +168,15 @@ async fn lets_people_join_with_an_invitation_once(db: PgPool) {
     let taken = json!({ "email": "admin@example.com", "displayName": "Someone", "password": "a long password" });
     let refused = app.call(Method::POST, &format!("/api/join/{token}"), Some(taken), None).await;
     assert_eq!(refused.status, StatusCode::CONFLICT);
-    let short = json!({ "email": "sam@example.com", "displayName": "Sam", "password": "short" });
+    let empty = json!({ "email": "sam@example.com", "displayName": "Sam", "password": "" });
     assert_eq!(
-        app.call(Method::POST, &format!("/api/join/{token}"), Some(short), None)
+        app.call(Method::POST, &format!("/api/join/{token}"), Some(empty), None)
             .await
             .status,
         StatusCode::BAD_REQUEST
     );
 
-    let body = json!({ "email": "sam@example.com", "displayName": "Sam", "password": "a long password" });
+    let body = json!({ "email": "sam@example.com", "displayName": "Sam", "password": "x" });
     let joined = app
         .call(Method::POST, &format!("/api/join/{token}"), Some(body.clone()), None)
         .await;
@@ -337,25 +337,25 @@ async fn changes_the_password_and_ends_the_other_sessions(db: PgPool) {
         .call(
             Method::POST,
             "/api/me/password",
-            Some(change("wrong horse battery", "a new long password")),
+            Some(change("wrong horse battery", "x")),
             Some(&admin),
         )
         .await;
     assert_eq!(wrong.status, StatusCode::FORBIDDEN);
-    let short = app
+    let empty = app
         .call(
             Method::POST,
             "/api/me/password",
-            Some(change("correct horse battery", "short")),
+            Some(change("correct horse battery", "")),
             Some(&admin),
         )
         .await;
-    assert_eq!(short.status, StatusCode::BAD_REQUEST);
+    assert_eq!(empty.status, StatusCode::BAD_REQUEST);
     let changed = app
         .call(
             Method::POST,
             "/api/me/password",
-            Some(change("correct horse battery", "a new long password")),
+            Some(change("correct horse battery", "x")),
             Some(&admin),
         )
         .await;
@@ -367,10 +367,7 @@ async fn changes_the_password_and_ends_the_other_sessions(db: PgPool) {
         sign_in(&app, "admin@example.com", "correct horse battery").await.status,
         StatusCode::UNAUTHORIZED
     );
-    assert_eq!(
-        sign_in(&app, "admin@example.com", "a new long password").await.status,
-        StatusCode::OK
-    );
+    assert_eq!(sign_in(&app, "admin@example.com", "x").await.status, StatusCode::OK);
 }
 
 #[sqlx::test(migrations = "../migrations")]

@@ -15,7 +15,7 @@ use crate::error::{ApiError, AppError};
 use crate::ids::{random_token, setup_code, sha256_hex};
 use crate::json::text_length;
 use crate::repo::people::{self, UserRecord};
-use crate::shared::{EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH};
+use crate::shared::{EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH};
 use crate::time::Time;
 
 pub const SESSION_COOKIE: &str = "albireo_session";
@@ -88,11 +88,13 @@ pub fn normalize_email(text: &str) -> Result<String, ApiError> {
 /// Checks the length of a new password.
 pub fn check_new_password(password: &str, name: &str) -> Result<(), ApiError> {
     let length = text_length(password);
-    if (PASSWORD_MIN_LENGTH..=PASSWORD_MAX_LENGTH).contains(&length) {
+    if length == 0 {
+        Err(ApiError::bad_request(format!("{name} is required.")))
+    } else if length <= PASSWORD_MAX_LENGTH {
         Ok(())
     } else {
         Err(ApiError::bad_request(format!(
-            "{name} must be {PASSWORD_MIN_LENGTH} to {PASSWORD_MAX_LENGTH} characters long."
+            "{name} must be at most {PASSWORD_MAX_LENGTH} characters long."
         )))
     }
 }

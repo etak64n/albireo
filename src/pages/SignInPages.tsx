@@ -8,7 +8,6 @@ import {
   DISPLAY_NAME_MAX_LENGTH,
   EMAIL_MAX_LENGTH,
   PASSWORD_MAX_LENGTH,
-  PASSWORD_MIN_LENGTH,
   type JoinInfo,
   type Me,
 } from "../../shared/api.ts";
@@ -155,10 +154,8 @@ function AccountFields({
       />
       <TextField
         label={t.auth.password}
-        hint={t.auth.passwordLength(PASSWORD_MIN_LENGTH)}
         type="password"
         autoComplete="new-password"
-        minLength={PASSWORD_MIN_LENGTH}
         maxLength={PASSWORD_MAX_LENGTH}
         value={password}
         onChange={onPassword}

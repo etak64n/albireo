@@ -71,7 +71,7 @@ The line says that albireo has nobody yet, and holds a code such as `"setupCode"
 ## Create the first admin
 
 Open http://localhost:8080.
-The page asks for the setup code and the account of the first admin: an email, a display name, and a password of at least 10 characters.
+The page asks for the setup code and the account of the first admin: an email, a display name, and a password.
 After Create admin, the page says that the library has no videos yet.
 Drop a video file on the page, or choose it with Upload.
 

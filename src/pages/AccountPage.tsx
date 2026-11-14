@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { LANGUAGES, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, type Language, type Session } from "../../shared/api.ts";
+import { LANGUAGES, PASSWORD_MAX_LENGTH, type Language, type Session } from "../../shared/api.ts";
 import { api } from "../api.ts";
 import { DetailTable, PageHeader, Section } from "../components/Page.tsx";
 import { Shell } from "../components/Shell.tsx";
@@ -98,7 +98,6 @@ function PasswordSection({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
   const currentId = useId();
   const newId = useId();
-  const hintId = useId();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -150,15 +149,10 @@ function PasswordSection({ onChanged }: { onChanged: () => void }) {
             type="password"
             autoComplete="new-password"
             required
-            minLength={PASSWORD_MIN_LENGTH}
             maxLength={PASSWORD_MAX_LENGTH}
-            aria-describedby={hintId}
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
           />
-          <p id={hintId} className="text-xs text-subdued">
-            {t.auth.passwordLength(PASSWORD_MIN_LENGTH)}
-          </p>
         </div>
         {error !== "" && (
           <p className="error-box" role="alert">

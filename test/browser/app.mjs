@@ -200,7 +200,7 @@ try {
   await page.goto(`${base}/settings/account`);
   await page.getByText("This device").waitFor();
   await page.getByLabel("Current password").fill("correct horse battery");
-  await page.getByLabel("New password").fill("a new horse battery");
+  await page.getByLabel("New password").fill("short");
   await page.getByRole("button", { name: "Change password" }).click();
   await page.getByText("Changed the password.").waitFor();
   await shot(page, "account");

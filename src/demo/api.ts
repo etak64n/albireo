@@ -17,7 +17,6 @@ import {
   LANGUAGES,
   LIST_PAGE_SIZE,
   PASSWORD_MAX_LENGTH,
-  PASSWORD_MIN_LENGTH,
   RATING_MAX_STARS,
   SEARCH_QUERY_MAX_LENGTH,
   TITLE_MAX_LENGTH,
@@ -282,8 +281,11 @@ function requireAdmin(what: string): void {
 function changePassword(body: Fields): undefined {
   readText(body, "currentPassword", 0, PASSWORD_MAX_LENGTH * 4, false);
   const password = readText(body, "newPassword", 0, PASSWORD_MAX_LENGTH * 4, false);
-  if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) {
-    throw badRequest(`newPassword must be ${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters long.`);
+  if (password.length === 0) {
+    throw badRequest("newPassword is required.");
+  }
+  if (password.length > PASSWORD_MAX_LENGTH) {
+    throw badRequest(`newPassword must be at most ${PASSWORD_MAX_LENGTH} characters long.`);
   }
   // A new password ends the sessions of the other browsers.
   library.sessions = library.sessions.filter((session) => session.current);

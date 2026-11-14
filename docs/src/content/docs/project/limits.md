@@ -41,7 +41,6 @@ export const RATING_MAX_STARS = 5;
 export const SEARCH_QUERY_MAX_LENGTH = 100;
 export const ATTACHMENT_MAX_BYTES = 500 * 1024 * 1024;
 export const ATTACHMENT_NAME_MAX_LENGTH = 255;
-export const PASSWORD_MIN_LENGTH = 10;
 export const PASSWORD_MAX_LENGTH = 200;
 export const EMAIL_MAX_LENGTH = 254;
 ```

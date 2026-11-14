@@ -14,7 +14,6 @@ export const SEARCH_QUERY_MAX_LENGTH = 100;
 export const ATTACHMENT_MAX_BYTES = 500 * 1024 * 1024;
 export const ATTACHMENT_NAME_MAX_LENGTH = 255;
 /** A password has 10 to 200 characters. */
-export const PASSWORD_MIN_LENGTH = 10;
 export const PASSWORD_MAX_LENGTH = 200;
 export const EMAIL_MAX_LENGTH = 254;
 /** IDs of videos, users, series, comments, and attachments: 16 digits and lowercase letters. */
